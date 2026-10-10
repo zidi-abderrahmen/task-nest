@@ -14,6 +14,10 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
 ![State](https://img.shields.io/badge/State-SetState-0d9488)
 
+<p align="center">
+  <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">🔗 YT Shorts App Demo</a>
+</p>
+
 ---
 
 ## Table of Contents
