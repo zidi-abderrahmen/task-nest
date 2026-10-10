@@ -47,6 +47,12 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Used by test/task_service_test.dart to simulate the Supabase HTTP layer.
+  http: ^1.6.0
+
+  # Used by test/task_service_test.dart to control the JSON worker lifecycle.
+  yet_another_json_isolate: ^2.1.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

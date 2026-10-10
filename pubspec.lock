@@ -169,7 +169,7 @@ packages:
     source: hosted
     version: "2.27.3"
   http:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -606,7 +606,7 @@ packages:
     source: hosted
     version: "1.1.0"
   yet_another_json_isolate:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: yet_another_json_isolate
       sha256: eaa26beb5990b25a49d942374fd5a0c5aa67a837e03b14b4c26134aaa1ed01a9
