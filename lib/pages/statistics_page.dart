@@ -141,9 +141,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
             final percentage = '${(completionRate * 100).round()}%';
 
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 1000,
+                ),
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
                 const Text(
                   'Your Progress',
                   style: TextStyle(
@@ -162,39 +167,57 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ),
                 const SizedBox(height: 24),
 
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.85,
-                  children: [
-                    _buildStatCard(
-                      title: 'Total Tasks',
-                      value: '$total',
-                      icon: Icons.checklist_rounded,
-                      color: _primary,
-                    ),
-                    _buildStatCard(
-                      title: 'Completed',
-                      value: '$completed',
-                      icon: Icons.check_circle_outline,
-                      color: const Color(0xFF10B981),
-                    ),
-                    _buildStatCard(
-                      title: 'Pending',
-                      value: '$pending',
-                      icon: Icons.pending_actions,
-                      color: const Color(0xFFF59E0B),
-                    ),
-                    _buildStatCard(
-                      title: 'Completion Rate',
-                      value: percentage,
-                      icon: Icons.trending_up,
-                      color: const Color(0xFF6366F1),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+
+                    final columns = width >= 800
+                        ? 4
+                        : width >= 560
+                            ? 3
+                            : 2;
+
+                    final aspectRatio = width >= 800
+                        ? 1.25
+                        : width >= 560
+                            ? 1.05
+                            : 0.9;
+
+                    return GridView.count(
+                      crossAxisCount: columns,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: aspectRatio,
+                      children: [
+                        _buildStatCard(
+                          title: 'Total Tasks',
+                          value: '$total',
+                          icon: Icons.checklist_rounded,
+                          color: _primary,
+                        ),
+                        _buildStatCard(
+                          title: 'Completed',
+                          value: '$completed',
+                          icon: Icons.check_circle_outline,
+                          color: const Color(0xFF10B981),
+                        ),
+                        _buildStatCard(
+                          title: 'Pending',
+                          value: '$pending',
+                          icon: Icons.pending_actions,
+                          color: const Color(0xFFF59E0B),
+                        ),
+                        _buildStatCard(
+                          title: 'Completion Rate',
+                          value: percentage,
+                          icon: Icons.trending_up,
+                          color: const Color(0xFF6366F1),
+                        ),
+                      ],
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 28),
@@ -269,7 +292,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   ),
                 ),
               ],
-            );
+            ),
+          ),
+        );   
           },
         ),
       ),
