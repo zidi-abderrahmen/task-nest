@@ -17,6 +17,7 @@ class _HomePageState extends State<HomePage> {
   late Future<List<Task>> _tasksFuture;
 
   String _statusFilter = 'All';
+  String _priorityFilter = 'All';
 
   static const _primary = Color(0xFF4F46E5);
   static const _background = Color(0xFFF8FAFC);
@@ -163,6 +164,173 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _showFilterSheet() async {
+    var selectedStatus = _statusFilter;
+    var selectedPriority = _priorityFilter;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Filter Tasks',
+                          style: TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () {
+                          Navigator.of(sheetContext).pop();
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['All', 'Pending', 'Completed']
+                        .map((status) {
+                      final selected = selectedStatus == status;
+
+                      return ChoiceChip(
+                        label: Text(status),
+                        selected: selected,
+                        selectedColor: const Color(0xFF4F46E5),
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : const Color(0xFF64748B),
+                        ),
+                        onSelected: (value) {
+                          if (!value) return;
+
+                          setSheetState(() {
+                            selectedStatus = status;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Priority',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: ['All', 'High', 'Medium', 'Low']
+                        .map((priority) {
+                      final selected = selectedPriority == priority;
+
+                      return ChoiceChip(
+                        label: Text(priority),
+                        selected: selected,
+                        selectedColor: const Color(0xFF4F46E5),
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : const Color(0xFF64748B),
+                        ),
+                        onSelected: (value) {
+                          if (!value) return;
+
+                          setSheetState(() {
+                            selectedPriority = priority;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            selectedStatus = 'All';
+                            selectedPriority = 'All';
+                          });
+                        },
+                        child: const Text('Reset'),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _statusFilter = selectedStatus;
+                            _priorityFilter = selectedPriority;
+                          });
+
+                          Navigator.of(sheetContext).pop();
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF4F46E5),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Apply Filters'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildTaskCard(Task task) {
     final priorityColor = _priorityColor(task.priority);
 
@@ -306,31 +474,63 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 20),
 
-              TextField(
-                controller: _searchController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: 'Search tasks...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.clear),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Search tasks...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.clear),
+                              ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
                         ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+
+                  const SizedBox(width: 8),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: (_statusFilter != 'All' ||
+                              _priorityFilter != 'All')
+                          ? const Color(0xFF4F46E5)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Filter tasks',
+                      onPressed: _showFilterSheet,
+                      icon: Icon(
+                        Icons.tune,
+                        color: (_statusFilter != 'All' ||
+                                _priorityFilter != 'All')
+                            ? Colors.white
+                            : const Color(0xFF4F46E5),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: 20),
 
@@ -377,7 +577,13 @@ class _HomePageState extends State<HomePage> {
                           (_statusFilter == 'Pending' && !task.completed) ||
                           (_statusFilter == 'Completed' && task.completed);
 
-                      return matchesSearch && matchesStatus;
+                      final matchesPriority =
+                          _priorityFilter == 'All' ||
+                          task.priority == _priorityFilter;
+
+                      return matchesSearch &&
+                          matchesStatus &&
+                          matchesPriority;
                     }).toList();
 
                     return Column(
@@ -391,41 +597,6 @@ class _HomePageState extends State<HomePage> {
                             color: Color(0xFF111827),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: ['All', 'Pending', 'Completed'].map((status) {
-                            final isSelected = _statusFilter == status;
-
-                            return ChoiceChip(
-                              label: Text(status),
-                              selected: isSelected,
-                              selectedColor: const Color(0xFF4F46E5),
-                              backgroundColor: Colors.white,
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : const Color(0xFF64748B),
-                                fontWeight: FontWeight.w500,
-                              ),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? const Color(0xFF4F46E5)
-                                    : const Color(0xFFE5E7EB),
-                              ),
-                              onSelected: (selected) {
-                                if (!selected) return;
-
-                                setState(() {
-                                  _statusFilter = status;
-                                });
-                              },
-                              checkmarkColor: Colors.white,
-                            );
-                          }).toList(),
-                        ),
-
                         const SizedBox(height: 12),
                         Expanded(
                           child: filteredTasks.isEmpty
