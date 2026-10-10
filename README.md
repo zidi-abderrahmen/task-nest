@@ -17,9 +17,12 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 [![Flutter CI](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml/badge.svg)](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml)
 
 <p align="center">
-  <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">🔗 YT Shorts Android App Demo</a>
-  |
-  <a href="https://youtu.be/wIUE7hF-_F4">🔗 YT Video Web Demo</a>
+  <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">
+    <img src="https://img.shields.io/badge/YouTube-Android%20App-red?style=flat-square&logo=youtube&logoColor=white" alt="YT Shorts Android App Demo">
+  </a>
+  <a href="https://youtu.be/wIUE7hF-_F4">
+    <img src="https://img.shields.io/badge/YouTube-Web%20Demo-red?style=flat-square&logo=youtube&logoColor=white" alt="YT Video Web Demo">
+  </a>
 </p>
 
 <div align="center">
