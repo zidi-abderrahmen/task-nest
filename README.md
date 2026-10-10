@@ -14,6 +14,7 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![Web](https://img.shields.io/badge/Web-4285F4?logo=googlechrome&logoColor=white)
 ![State](https://img.shields.io/badge/State-SetState-0d9488)
+[![Flutter CI](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml/badge.svg)](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml)
 
 <p align="center">
   <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">🔗 YT Shorts Android App Demo</a>
@@ -21,14 +22,24 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
   <a href="https://youtu.be/wIUE7hF-_F4">🔗 YT Video Web Demo</a>
 </p>
 
+<div align="center">
+
+| | |
+|:---:|:---:|
+| *Home Page* | *Filter Menu* |
+| ![Home Page](./docs/screenshots/home_page.jpg) | ![Filter Menu](./docs/screenshots/filter_menu.jpg) |
+| *Add / Edit Task* | *Statistics* |
+| ![Add / Edit Task](./docs/screenshots/add_edit_page.jpg) | ![Statistics](./docs/screenshots/statistics_page.jpg) |
+
+</div>
+
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Quick Start](#quick-start)
 - [Features](#features)
-- [Screenshots](#screenshots)
-- [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Routing & Navigation](#routing--navigation)
@@ -116,14 +127,24 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 
 ---
 
-## Screenshots
+## Quick Start
 
-| | |
-|:---:|:---:|
-| *Home Page* | *Filter Menu* |
-| <img src="./docs/screenshots/home_page.jpg" alt="Home page" width="100%"> | <img src="./docs/screenshots/filter_menu.jpg" alt="Filter menu" width="100%"> |
-| *Add / Edit Task* | *Statistics* |
-| <img src="./docs/screenshots/add_edit_page.jpg" alt="Add / Edit task" width="100%"> | <img src="./docs/screenshots/statistics_page.jpg" alt="Statistics" width="100%"> |
+```bash
+# 1. Clone the repository
+git clone https://github.com/zidi-abderrahmen/task-nest.git
+cd task-nest
+
+# 2. Resolve dependencies
+flutter pub get
+
+# 3. Create your local environment file from the committed template
+cp env.example.json env.json
+
+# 4. Run on a device, emulator, or Chrome
+flutter run --dart-define-from-file=env.json
+```
+
+Before running, open `env.json` and set your own Supabase project values (see [Environment Setup](#environment-setup)).
 
 ---
 
@@ -138,6 +159,8 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 | **Client SDK** | [`supabase_flutter`](https://pub.dev/packages/supabase_flutter) `^2.18.2` |
 | **Icons** | `cupertino_icons` `^1.0.8` |
 | **Linting** | `flutter_lints` `^6.0.0` (dev dependency, via `analysis_options.yaml`) |
+| **Testing** | `flutter_test` + `http` (dev dependency, fake HTTP client for service tests) |
+| **CI** | GitHub Actions — `flutter analyze` + `flutter test` via [`subosito/flutter-action`](https://github.com/subosito/flutter-action) |
 | **Platform** | Android (`applicationId`: `com.example.tasknest_flutter`) and Web — both verified |
 | **State management** | None external — Flutter `StatefulWidget` + `setState` |
 | **Data access** | `TaskService` over the Supabase client (`TaskService.fetchTasks`, `addTask`, `updateTask`, `updateTaskCompletion`, `deleteTask`) |
@@ -205,9 +228,12 @@ tasknest_flutter/
 ├── lib/
 │   ├── main.dart                     # Entry point: Supabase init + Material 3 app shell
 │   ├── models/
-│   │   └── task.dart                 # Task model + Task.fromMap (Supabase row → Task)
+│   │   ├── task.dart                 # Task model + Task.fromMap (Supabase row → Task)
+│   │   └── task_statistics.dart      # TaskStatistics.fromTasks (progress metrics)
 │   ├── services/
 │   │   └── task_service.dart         # All Supabase CRUD operations
+│   ├── utils/
+│   │   └── task_filters.dart         # Shared search/status/priority filtering logic
 │   └── pages/
 │       ├── home_page.dart            # Task list, search, filters, delete, navigation
 │       ├── add_task_page.dart        # Create-task form
@@ -215,7 +241,15 @@ tasknest_flutter/
 │       ├── task_details_page.dart    # Read-only task view + Edit entry point
 │       └── statistics_page.dart      # Progress metrics + completion bar
 ├── test/
-│   └── widget_test.dart              # Minimal Flutter template smoke test
+│   ├── task_model_test.dart          # Task.fromMap parsing + due-date handling
+│   ├── task_filters_test.dart        # Priority order + combined filtering
+│   ├── task_statistics_test.dart     # Completion metrics (incl. empty list)
+│   ├── task_service_test.dart        # CRUD against a fake HTTP client + errors
+│   └── add_task_page_test.dart       # Add Task form validation (empty/blank title)
+├── .github/
+│   └── workflows/
+│       └── flutter.yml               # GitHub Actions CI: analyze + test
+├── env.example.json                  # Committed env template (placeholders only)
 ├── env.json                          # Local Supabase config (git-ignored)
 ├── .gitignore                        # Ignores env.json and flutterflow_reference/
 └── pubspec.yaml
@@ -337,16 +371,20 @@ const supabasePublishableKey =
     String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 ```
 
-Values are supplied through a local `env.json` file that is **git-ignored** (`.gitignore` contains `/env.json`). Create it at the project root and replace the placeholders with values from **your own** Supabase project (Project Settings → API):
+Values are supplied through a local `env.json` file that is **git-ignored** (`.gitignore` contains `/env.json`). A committed template is available at **`env.example.json`** (placeholders only — no secrets). Create your local file and replace the placeholders with values from **your own** Supabase project (Project Settings → API):
+
+```bash
+cp env.example.json env.json
+```
 
 ```json
 {
   "SUPABASE_URL": "https://your-project.supabase.co",
-  "SUPABASE_PUBLISHABLE_KEY": "your-supabase-publishable-key"
+  "SUPABASE_PUBLISHABLE_KEY": "your-publishable-anon-key"
 }
 ```
 
-> The repository does **not** ship an `env.example.json`. If you want a committed template for collaborators, create one yourself with the placeholder structure above and keep the real `env.json` local.
+> `env.example.json` stays committed so collaborators can see the expected shape at a glance, while the real `env.json` with your credentials stays local and out of Git.
 
 **Configuration notes**
 
@@ -423,16 +461,24 @@ This is required so the app can reach the Supabase REST API on Android. The debu
 
 ## Testing & Quality
 
-The repository contains a single smoke test scaffold kept from the Flutter template (`test/widget_test.dart`) that pumps `TaskNestApp` and checks a counter that is not part of TaskNest. There are currently **no** meaningful unit or widget tests for the model, service, or pages.
+TaskNest ships a **real test suite** (replacing the default Flutter template test) plus a **GitHub Actions CI pipeline** that runs on every push and pull request to `main`.
 
-Standard commands:
+| Test file | Covers |
+| --- | --- |
+| `test/task_model_test.dart` | `Task.fromMap` row parsing, defaults, due-date parsing, and `priority_order` handling. |
+| `test/task_filters_test.dart` | `Task.priorityOrderFor` mapping and `filterTasks` — search, status, priority, combined, and empty-list behavior. |
+| `test/task_statistics_test.dart` | `TaskStatistics.fromTasks` — totals, completion rate, rounded percentage, including the empty-list case. |
+| `test/task_service_test.dart` | `TaskService` CRUD against a **fake HTTP client** — request payloads, ordering, and `PostgrestException` propagation on server errors. |
+| `test/add_task_page_test.dart` | Add Task form rejects empty and blank titles. |
+
+Run the quality gates locally:
 
 ```bash
-flutter analyze          # static analysis (flutter_lints)
-flutter test             # runs test/widget_test.dart
+flutter analyze   # static analysis (flutter_lints)
+flutter test      # runs the full suite above
 ```
 
-Quality status is straightforward: linting via `flutter_lints`, but no automated CI, no coverage reporting, and no verified test suite. Automated tests are a planned improvement (see the [Roadmap](#roadmap)).
+CI (`.github/workflows/flutter.yml`) installs the latest **stable** Flutter channel and runs `flutter pub get`, `flutter analyze`, and `flutter test`. Its status badge sits in the header of this README.
 
 ---
 
@@ -461,7 +507,6 @@ Client-side guards would be a UX layer anyway — in any future multi-user setup
 - No Supabase Realtime: changes made by another client are not pushed; the list refreshes only on navigation/mutation.
 - Filters and search run client-side over the full fetched list (fine at demo scale).
 - Sorting relies on Supabase default ascending order for `priority_order` and `created_at`.
-- The included widget test is still the default counter-template scaffold and does not reflect the app.
 - Colors and styling constants are repeated across pages rather than centralized in a theme file.
 - The web build is verified in a browser but ships without PWA/service-worker offline support.
 
@@ -480,6 +525,7 @@ Since FlutterFlow's full code export required a premium subscription, the genera
 - Task cards gained status/priority badges, priority colors, completion styling, and overdue warnings.
 - A Statistics page with calculated metrics and a progress bar was added.
 - Form validation, delete confirmation, loading states, and error handling were introduced.
+- The default template test was replaced with a real suite covering the model, filters, statistics, the service, and form validation, and a GitHub Actions CI pipeline was added.
 
 The result is a **manually adapted implementation** — not a full FlutterFlow export — with a clearer separation between UI, the data model, and database access.
 
@@ -494,13 +540,13 @@ Implemented today:
 - [x] Task details and edit flows.
 - [x] Statistics with completion rate and progress bar.
 - [x] Delete confirmation, validation, loading, and error states.
+- [x] Automated unit, widget, and service tests plus a GitHub Actions CI pipeline.
 
 Planned next steps:
 
 - [ ] Authentication and per-user task ownership.
 - [ ] User-specific Row Level Security policies.
-- [ ] Automated widget and service tests.
-- [ ] Better empty, loading, and error states where needed.
+- [ ] Coverage reporting and more edge-case widget tests.
 - [ ] Accessibility and localization improvements.
 - [ ] Offline task access via a local persistence strategy.
 - [ ] Optional Supabase Realtime updates for live multi-client sync.
