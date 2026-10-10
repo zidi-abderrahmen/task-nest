@@ -246,6 +246,8 @@ tasknest_flutter/
 │   ├── task_statistics_test.dart     # Completion metrics (incl. empty list)
 │   ├── task_service_test.dart        # CRUD against a fake HTTP client + errors
 │   └── add_task_page_test.dart       # Add Task form validation (empty/blank title)
+├── db/
+│   └── schema.sql                    # Tasks table + index + RLS policies
 ├── .github/
 │   └── workflows/
 │       └── flutter.yml               # GitHub Actions CI: analyze + test
@@ -276,7 +278,9 @@ There is intentionally **no edit button on Home's task cards** — editing is re
 
 ## Database & Data Layer
 
-The application uses the existing Supabase project and its `public.tasks` table. This schema already exists in Supabase — it should **not** be recreated blindly:
+The full schema is committed at **[`db/schema.sql`](./db/schema.sql)** — table, index, and Row Level Security policies. To bootstrap a **fresh** project, paste that file into the Supabase SQL editor or run `supabase db execute --file db/schema.sql`.
+
+The application uses the existing Supabase project and its `public.tasks` table. This schema already exists in that remote project — it should **not** be recreated blindly from `db/schema.sql`; only apply the file when setting up a new project:
 
 ```sql
 create table public.tasks (
@@ -304,6 +308,8 @@ create table public.tasks (
 | `priority_order` | Numeric value used for priority sorting | `priorityOrder` |
 
 The app writes `id` and `created_at` never — they are database defaults. It also never sends a `completed` value on edit, so changing details never resets completion.
+
+The schema file also enables Row Level Security and grants anonymous `select`/`insert`/`update`/`delete` on `tasks`, matching the demo configuration the app relies on.
 
 ---
 
