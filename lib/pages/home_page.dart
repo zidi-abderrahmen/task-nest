@@ -16,6 +16,8 @@ class _HomePageState extends State<HomePage> {
 
   late Future<List<Task>> _tasksFuture;
 
+  String _statusFilter = 'All';
+
   static const _primary = Color(0xFF4F46E5);
   static const _background = Color(0xFFF8FAFC);
   static const _secondaryText = Color(0xFF64748B);
@@ -364,11 +366,18 @@ class _HomePageState extends State<HomePage> {
                     }
 
                     final tasks = snapshot.data ?? [];
-                    final query =
-                        _searchController.text.trim().toLowerCase();
+                    final query = _searchController.text.trim().toLowerCase();
 
                     final filteredTasks = tasks.where((task) {
-                      return task.title.toLowerCase().contains(query);
+                      final matchesSearch =
+                          task.title.toLowerCase().contains(query);
+
+                      final matchesStatus =
+                          _statusFilter == 'All' ||
+                          (_statusFilter == 'Pending' && !task.completed) ||
+                          (_statusFilter == 'Completed' && task.completed);
+
+                      return matchesSearch && matchesStatus;
                     }).toList();
 
                     return Column(
@@ -382,6 +391,41 @@ class _HomePageState extends State<HomePage> {
                             color: Color(0xFF111827),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: ['All', 'Pending', 'Completed'].map((status) {
+                            final isSelected = _statusFilter == status;
+
+                            return ChoiceChip(
+                              label: Text(status),
+                              selected: isSelected,
+                              selectedColor: const Color(0xFF4F46E5),
+                              backgroundColor: Colors.white,
+                              labelStyle: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? const Color(0xFF4F46E5)
+                                    : const Color(0xFFE5E7EB),
+                              ),
+                              onSelected: (selected) {
+                                if (!selected) return;
+
+                                setState(() {
+                                  _statusFilter = status;
+                                });
+                              },
+                              checkmarkColor: Colors.white,
+                            );
+                          }).toList(),
+                        ),
+
                         const SizedBox(height: 12),
                         Expanded(
                           child: filteredTasks.isEmpty
