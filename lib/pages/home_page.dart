@@ -3,6 +3,7 @@ import 'add_task_page.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
 import 'task_details_page.dart';
+import 'statistics_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,7 +23,6 @@ class _HomePageState extends State<HomePage> {
   static const _primary = Color(0xFF4F46E5);
   static const _background = Color(0xFFF8FAFC);
   static const _secondaryText = Color(0xFF64748B);
-  static const _border = Color(0xFFE5E7EB);
 
   @override
   void initState() {
@@ -538,6 +538,19 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Statistics',
+            icon: const Icon(Icons.insights_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const StatisticsPage(),
+                ),
+              );
+            },
+          ),
+        ],
         title: const Text(
           'TaskNest',
           style: TextStyle(
