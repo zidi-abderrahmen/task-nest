@@ -41,11 +41,17 @@ class TaskService {
     required String priority,
     DateTime? dueDate,
   }) async {
+    final priorityOrder = {
+      'High': 3,
+      'Medium': 2,
+      'Low': 1,
+    }[priority] ?? 2;
     final data = <String, dynamic>{
       'title': title.trim(),
       'description': description.trim(),
       'completed': false,
       'priority': priority,
+      'priority_order': priorityOrder,
     };
 
     if (dueDate != null) {
