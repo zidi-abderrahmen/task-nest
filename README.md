@@ -16,7 +16,9 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 ![State](https://img.shields.io/badge/State-SetState-0d9488)
 
 <p align="center">
-  <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">🔗 YT Shorts App Demo</a>
+  <a href="https://youtu.be/v_In0BOq7Dk?si=TC1Ewqr1UXUYOthZ">🔗 YT Shorts Android App Demo</a>
+  |
+  <a href="https://youtu.be/wIUE7hF-_F4">🔗 YT Video Web Demo</a>
 </p>
 
 ---
