@@ -76,6 +76,63 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _deleteTask(Task task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete task?'),
+          content: Text(
+            'Are you sure you want to delete "${task.title}"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await TaskService().deleteTask(task.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _tasksFuture = TaskService().fetchTasks();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Task deleted successfully.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not delete task: $error'),
+        ),
+      );
+    }
+  }
+
   Widget _buildTaskCard(Task task) {
     final priorityColor = _priorityColor(task.priority);
 
@@ -153,6 +210,14 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Delete task',
+                onPressed: () => _deleteTask(task),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Color(0xFFEF4444),
                 ),
               ),
             ],

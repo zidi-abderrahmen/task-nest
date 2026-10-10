@@ -27,4 +27,11 @@ class TaskService {
         .update({'completed': completed})
         .eq('id', taskId);
   }
+
+  Future<void> deleteTask(String taskId) async {
+    await _client
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+  }
 }
