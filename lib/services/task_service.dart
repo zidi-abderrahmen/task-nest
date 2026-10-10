@@ -17,4 +17,14 @@ class TaskService {
 
     return response.map((row) => Task.fromMap(row)).toList();
   }
+
+  Future<void> updateTaskCompletion({
+    required String taskId,
+    required bool completed,
+  }) async {
+    await _client
+        .from('tasks')
+        .update({'completed': completed})
+        .eq('id', taskId);
+  }
 }

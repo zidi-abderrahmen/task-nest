@@ -53,86 +53,112 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _toggleTask(Task task) async {
+    try {
+      await TaskService().updateTaskCompletion(
+        taskId: task.id,
+        completed: !task.completed,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _tasksFuture = TaskService().fetchTasks();
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not update task: $error'),
+        ),
+      );
+    }
+  }
+
   Widget _buildTaskCard(Task task) {
     final priorityColor = _priorityColor(task.priority);
 
-    return Opacity(
-      opacity: task.completed ? 0.8 : 1,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.circle,
-              size: 12,
-              color: priorityColor,
-            ),
-            const SizedBox(width: 12),
-            Icon(
-              task.completed
-                  ? Icons.check_circle
-                  : Icons.circle_outlined,
-              color: task.completed ? const Color(0xFF10B981) : _primary,
-              size: 23,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title.isEmpty ? 'Untitled task' : task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF111827),
-                      decoration: task.completed
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                  if (task.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+    return GestureDetector(
+      onTap: () => _toggleTask(task),
+      child: Opacity(
+        opacity: task.completed ? 0.8 : 1,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.circle,
+                size: 12,
+                color: priorityColor,
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                task.completed
+                    ? Icons.check_circle
+                    : Icons.circle_outlined,
+                color: task.completed ? const Color(0xFF10B981) : _primary,
+                size: 23,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      task.description,
-                      maxLines: 2,
+                      task.title.isEmpty ? 'Untitled task' : task.title,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: _secondaryText,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF111827),
+                        decoration: task.completed
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
+                    ),
+                    if (task.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        task.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: _secondaryText,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '${task.priority} · ${_formatDate(task.dueDate)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: priorityColor,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Text(
-                    '${task.priority} · ${_formatDate(task.dueDate)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: priorityColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      )
     );
   }
 
@@ -209,8 +235,7 @@ class _HomePageState extends State<HomePage> {
                 child: FutureBuilder<List<Task>>(
                   future: _tasksFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState ==
-                        ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                       return const Center(
                         child: CircularProgressIndicator(),
                       );
