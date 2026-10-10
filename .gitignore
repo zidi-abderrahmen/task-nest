@@ -49,3 +49,4 @@ app.*.map.json
 
 # FlutterFlow related
 flutterflow_reference/
+/env.json
