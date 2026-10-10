@@ -6,7 +6,7 @@ class TaskService {
   final SupabaseClient _client;
 
   TaskService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+    : _client = client ?? Supabase.instance.client;
 
   Future<List<Task>> fetchTasks() async {
     final response = await _client
@@ -29,10 +29,7 @@ class TaskService {
   }
 
   Future<void> deleteTask(String taskId) async {
-    await _client
-        .from('tasks')
-        .delete()
-        .eq('id', taskId);
+    await _client.from('tasks').delete().eq('id', taskId);
   }
 
   Future<void> addTask({
@@ -41,17 +38,12 @@ class TaskService {
     required String priority,
     DateTime? dueDate,
   }) async {
-    final priorityOrder = {
-      'High': 3,
-      'Medium': 2,
-      'Low': 1,
-    }[priority] ?? 2;
     final data = <String, dynamic>{
       'title': title.trim(),
       'description': description.trim(),
       'completed': false,
       'priority': priority,
-      'priority_order': priorityOrder,
+      'priority_order': Task.priorityOrderFor(priority),
     };
 
     if (dueDate != null) {
@@ -68,23 +60,14 @@ class TaskService {
     required String priority,
     DateTime? dueDate,
   }) async {
-    final priorityOrder = {
-      'Low': 1,
-      'Medium': 2,
-      'High': 3,
-    }[priority] ?? 2;
-
     final data = <String, dynamic>{
       'title': title.trim(),
       'description': description.trim(),
       'priority': priority,
-      'priority_order': priorityOrder,
+      'priority_order': Task.priorityOrderFor(priority),
       'due_date': dueDate?.toIso8601String().split('T').first,
     };
 
-    await _client
-        .from('tasks')
-        .update(data)
-        .eq('id', taskId);
+    await _client.from('tasks').update(data).eq('id', taskId);
   }
 }

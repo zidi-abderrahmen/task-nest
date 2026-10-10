@@ -1,4 +1,16 @@
 class Task {
+  static const Map<String, int> priorityOrderValues = {
+    'High': 3,
+    'Medium': 2,
+    'Low': 1,
+  };
+
+  /// Maps a priority label to its numeric sorting value.
+  ///
+  /// Unknown priorities fall back to the Medium value (2).
+  static int priorityOrderFor(String priority) =>
+      priorityOrderValues[priority] ?? 2;
+
   const Task({
     required this.id,
     required this.title,
@@ -19,6 +31,17 @@ class Task {
   final DateTime? createdAt;
   final int? priorityOrder;
 
+  /// Normalizes any date string to a date-only `DateTime` (local midnight).
+  ///
+  /// Supabase stores due dates as `yyyy-MM-dd`, but timestamps (`T...`) are
+  /// tolerated as well so that due-date dates never shift across timezones.
+  static DateTime? _parseDueDate(dynamic value) {
+    if (value == null) return null;
+    final parsed = DateTime.tryParse(value.toString());
+    if (parsed == null) return null;
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id']?.toString() ?? '',
@@ -26,9 +49,7 @@ class Task {
       description: map['description']?.toString() ?? '',
       completed: map['completed'] as bool? ?? false,
       priority: map['priority']?.toString() ?? 'Medium',
-      dueDate: map['due_date'] == null
-          ? null
-          : DateTime.tryParse(map['due_date'].toString()),
+      dueDate: _parseDueDate(map['due_date']),
       createdAt: map['created_at'] == null
           ? null
           : DateTime.tryParse(map['created_at'].toString()),

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../services/task_service.dart';
@@ -63,11 +62,8 @@ class _AddTaskPageState extends State<AddTaskPage> {
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not add task: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not add task: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -110,10 +106,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               const SizedBox(height: 8),
               const Text(
                 'Organize your next activity.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF64748B),
-                ),
+                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 28),
 
@@ -171,18 +164,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Low',
-                    child: Text('Low'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Medium',
-                    child: Text('Medium'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'High',
-                    child: Text('High'),
-                  ),
+                  DropdownMenuItem(value: 'Low', child: Text('Low')),
+                  DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                  DropdownMenuItem(value: 'High', child: Text('High')),
                 ],
                 onChanged: _isSaving
                     ? null
@@ -198,20 +182,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
               const Text(
                 'Due Date (Optional)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
 
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
+              Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                  ),
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
                 ),
                 child: ListTile(
                   leading: const Icon(
@@ -219,9 +198,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
                     color: _primary,
                   ),
                   title: Text(
-                    _dueDate == null
-                        ? 'Select a date'
-                        : _formatDate(_dueDate!),
+                    _dueDate == null ? 'Select a date' : _formatDate(_dueDate!),
                   ),
                   trailing: _dueDate == null
                       ? const Icon(Icons.chevron_right)
@@ -263,9 +240,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
                           ),
                         )
                       : const Icon(Icons.add),
-                  label: Text(
-                    _isSaving ? 'Saving...' : 'Add Task',
-                  ),
+                  label: Text(_isSaving ? 'Saving...' : 'Add Task'),
                 ),
               ),
             ],

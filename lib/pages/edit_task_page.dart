@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../models/task.dart';
 import '../services/task_service.dart';
 
 class EditTaskPage extends StatefulWidget {
   final Task task;
 
-  const EditTaskPage({
-    super.key,
-    required this.task,
-  });
+  const EditTaskPage({super.key, required this.task});
 
   @override
   State<EditTaskPage> createState() => _EditTaskPageState();
@@ -32,16 +30,13 @@ class _EditTaskPageState extends State<EditTaskPage> {
     super.initState();
 
     // Fill the form with the existing task values.
-    _titleController = TextEditingController(
-      text: widget.task.title,
-    );
+    _titleController = TextEditingController(text: widget.task.title);
 
     _descriptionController = TextEditingController(
       text: widget.task.description,
     );
 
-    _priority = ['Low', 'Medium', 'High']
-            .contains(widget.task.priority)
+    _priority = ['Low', 'Medium', 'High'].contains(widget.task.priority)
         ? widget.task.priority
         : 'Medium';
 
@@ -96,23 +91,16 @@ class _EditTaskPageState extends State<EditTaskPage> {
         priority: _priority,
         dueDate: _dueDate,
         createdAt: widget.task.createdAt,
-        priorityOrder: {
-              'Low': 1,
-              'Medium': 2,
-              'High': 3,
-            }[_priority] ??
-            2,
+        priorityOrder: Task.priorityOrderFor(_priority),
       );
 
       Navigator.of(context).pop(updatedTask);
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not update task: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not update task: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -155,10 +143,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
               const SizedBox(height: 8),
               const Text(
                 'Update your task details below.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF64748B),
-                ),
+                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 28),
 
@@ -220,18 +205,9 @@ class _EditTaskPageState extends State<EditTaskPage> {
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Low',
-                    child: Text('Low'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Medium',
-                    child: Text('Medium'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'High',
-                    child: Text('High'),
-                  ),
+                  DropdownMenuItem(value: 'Low', child: Text('Low')),
+                  DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                  DropdownMenuItem(value: 'High', child: Text('High')),
                 ],
                 onChanged: _isSaving
                     ? null
@@ -249,10 +225,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
               // Due date
               const Text(
                 'Due Date (Optional)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
 
@@ -260,9 +233,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                  ),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 child: ListTile(
                   leading: const Icon(
@@ -270,9 +241,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                     color: _primary,
                   ),
                   title: Text(
-                    _dueDate == null
-                        ? 'Select a date'
-                        : _formatDate(_dueDate!),
+                    _dueDate == null ? 'Select a date' : _formatDate(_dueDate!),
                   ),
                   trailing: _dueDate == null
                       ? const Icon(Icons.chevron_right)
@@ -315,9 +284,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                           ),
                         )
                       : const Icon(Icons.save_outlined),
-                  label: Text(
-                    _isSaving ? 'Saving...' : 'Save Changes',
-                  ),
+                  label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
                 ),
               ),
             ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'add_task_page.dart';
+
 import '../models/task.dart';
 import '../services/task_service.dart';
+import '../utils/task_filters.dart';
+import 'add_task_page.dart';
 import 'task_details_page.dart';
 import 'statistics_page.dart';
 
@@ -71,11 +73,9 @@ class _HomePageState extends State<HomePage> {
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not update task: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not update task: $error')));
     }
   }
 
@@ -85,9 +85,7 @@ class _HomePageState extends State<HomePage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Delete task?'),
-          content: Text(
-            'Are you sure you want to delete "${task.title}"?',
-          ),
+          content: Text('Are you sure you want to delete "${task.title}"?'),
           actions: [
             TextButton(
               onPressed: () {
@@ -121,27 +119,20 @@ class _HomePageState extends State<HomePage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task deleted successfully.'),
-        ),
+        const SnackBar(content: Text('Task deleted successfully.')),
       );
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not delete task: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete task: $error')));
     }
   }
 
   Future<void> _openAddTask() async {
-    final added = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const AddTaskPage(),
-      ),
-    );
+    final added = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const AddTaskPage()));
 
     if (!mounted || added != true) return;
 
@@ -151,11 +142,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openTaskDetails(Task task) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TaskDetailsPage(task: task),
-      ),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => TaskDetailsPage(task: task)));
 
     if (!mounted) return;
 
@@ -170,10 +158,7 @@ class _HomePageState extends State<HomePage> {
     IconData? icon,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(8),
@@ -182,11 +167,7 @@ class _HomePageState extends State<HomePage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(
-              icon,
-              size: 13,
-              color: color,
-            ),
+            Icon(icon, size: 13, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -212,9 +193,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
@@ -263,8 +242,7 @@ class _HomePageState extends State<HomePage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['All', 'Pending', 'Completed']
-                        .map((status) {
+                    children: ['All', 'Pending', 'Completed'].map((status) {
                       final selected = selectedStatus == status;
 
                       return ChoiceChip(
@@ -304,8 +282,7 @@ class _HomePageState extends State<HomePage> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['All', 'High', 'Medium', 'Low']
-                        .map((priority) {
+                    children: ['All', 'High', 'Medium', 'Low'].map((priority) {
                       final selected = selectedPriority == priority;
 
                       return ChoiceChip(
@@ -380,7 +357,8 @@ class _HomePageState extends State<HomePage> {
 
     final today = DateUtils.dateOnly(DateTime.now());
 
-    final isOverdue = !task.completed &&
+    final isOverdue =
+        !task.completed &&
         dueDate != null &&
         DateUtils.dateOnly(dueDate).isBefore(today);
 
@@ -409,9 +387,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Icon(
-              task.completed
-                  ? Icons.check_circle
-                  : Icons.circle_outlined,
+              task.completed ? Icons.check_circle : Icons.circle_outlined,
               color: statusColor,
               size: 25,
             ),
@@ -423,9 +399,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    task.title.isEmpty
-                        ? 'Untitled task'
-                        : task.title,
+                    task.title.isEmpty ? 'Untitled task' : task.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -459,13 +433,9 @@ class _HomePageState extends State<HomePage> {
                     runSpacing: 6,
                     children: [
                       _buildTaskBadge(
-                        label: task.completed
-                            ? 'Completed'
-                            : 'Pending',
+                        label: task.completed ? 'Completed' : 'Pending',
                         color: statusColor,
-                        icon: task.completed
-                            ? Icons.check
-                            : Icons.schedule,
+                        icon: task.completed ? Icons.check : Icons.schedule,
                       ),
 
                       _buildTaskBadge(
@@ -543,20 +513,15 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Statistics',
             icon: const Icon(Icons.insights_outlined),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const StatisticsPage(),
-                ),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const StatisticsPage()));
             },
           ),
         ],
         title: const Text(
           'TaskNest',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
@@ -576,10 +541,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 6),
               const Text(
                 'Stay organized today.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _secondaryText,
-                ),
+                style: TextStyle(fontSize: 14, color: _secondaryText),
               ),
               const SizedBox(height: 20),
 
@@ -618,22 +580,20 @@ class _HomePageState extends State<HomePage> {
 
                   Container(
                     decoration: BoxDecoration(
-                      color: (_statusFilter != 'All' ||
-                              _priorityFilter != 'All')
+                      color:
+                          (_statusFilter != 'All' || _priorityFilter != 'All')
                           ? const Color(0xFF4F46E5)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFE5E7EB),
-                      ),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
                     child: IconButton(
                       tooltip: 'Filter tasks',
                       onPressed: _showFilterSheet,
                       icon: Icon(
                         Icons.tune,
-                        color: (_statusFilter != 'All' ||
-                                _priorityFilter != 'All')
+                        color:
+                            (_statusFilter != 'All' || _priorityFilter != 'All')
                             ? Colors.white
                             : const Color(0xFF4F46E5),
                       ),
@@ -647,10 +607,9 @@ class _HomePageState extends State<HomePage> {
                 child: FutureBuilder<List<Task>>(
                   future: _tasksFuture,
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
+                    if (snapshot.connectionState == ConnectionState.waiting &&
+                        !snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     if (snapshot.hasError) {
@@ -663,8 +622,7 @@ class _HomePageState extends State<HomePage> {
                             ElevatedButton(
                               onPressed: () {
                                 setState(() {
-                                  _tasksFuture =
-                                      TaskService().fetchTasks();
+                                  _tasksFuture = TaskService().fetchTasks();
                                 });
                               },
                               child: const Text('Retry'),
@@ -673,27 +631,14 @@ class _HomePageState extends State<HomePage> {
                         ),
                       );
                     }
-
                     final tasks = snapshot.data ?? [];
-                    final query = _searchController.text.trim().toLowerCase();
 
-                    final filteredTasks = tasks.where((task) {
-                      final matchesSearch =
-                          task.title.toLowerCase().contains(query);
-
-                      final matchesStatus =
-                          _statusFilter == 'All' ||
-                          (_statusFilter == 'Pending' && !task.completed) ||
-                          (_statusFilter == 'Completed' && task.completed);
-
-                      final matchesPriority =
-                          _priorityFilter == 'All' ||
-                          task.priority == _priorityFilter;
-
-                      return matchesSearch &&
-                          matchesStatus &&
-                          matchesPriority;
-                    }).toList();
+                    final filteredTasks = filterTasks(
+                      tasks,
+                      query: _searchController.text,
+                      status: _statusFilter,
+                      priority: _priorityFilter,
+                    );
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,7 +656,7 @@ class _HomePageState extends State<HomePage> {
                           child: filteredTasks.isEmpty
                               ? Center(
                                   child: Text(
-                                    query.isEmpty
+                                    _searchController.text.trim().isEmpty
                                         ? 'No Task Yet, Add One!'
                                         : 'No tasks match your search.',
                                     textAlign: TextAlign.center,
@@ -724,9 +669,7 @@ class _HomePageState extends State<HomePage> {
                               : ListView.builder(
                                   itemCount: filteredTasks.length,
                                   itemBuilder: (context, index) {
-                                    return _buildTaskCard(
-                                      filteredTasks[index],
-                                    );
+                                    return _buildTaskCard(filteredTasks[index]);
                                   },
                                 ),
                         ),

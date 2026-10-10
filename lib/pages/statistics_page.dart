@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../models/task.dart';
+import '../models/task_statistics.dart';
 import '../services/task_service.dart';
 
 class StatisticsPage extends StatefulWidget {
@@ -39,9 +41,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE5E7EB),
-        ),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,11 +53,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 23,
-            ),
+            child: Icon(icon, color: color, size: 23),
           ),
           const SizedBox(height: 16),
           Text(
@@ -71,10 +67,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 13,
-              color: _secondaryText,
-            ),
+            style: const TextStyle(fontSize: 13, color: _secondaryText),
           ),
         ],
       ),
@@ -96,9 +89,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
@@ -131,170 +122,163 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
             final tasks = snapshot.data ?? [];
 
-            final total = tasks.length;
-            final completed = tasks.where((task) => task.completed).length;
-            final pending = total - completed;
+            final stats = TaskStatistics.fromTasks(tasks);
 
-            final completionRate = total == 0
-                ? 0.0
-                : completed / total;
+            final total = stats.total;
+            final completed = stats.completed;
+            final pending = stats.pending;
+            final completionRate = stats.completionRate;
 
-            final percentage = '${(completionRate * 100).round()}%';
+            final percentage = '${stats.completionPercentage}%';
 
             return Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 1000,
-                ),
+                constraints: const BoxConstraints(maxWidth: 1000),
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                const Text(
-                  'Your Progress',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Get an overview of your tasks and progress.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _secondaryText,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                    const Text(
+                      'Your Progress',
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Get an overview of your tasks and progress.',
+                      style: TextStyle(fontSize: 14, color: _secondaryText),
+                    ),
+                    const SizedBox(height: 24),
 
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final width = constraints.maxWidth;
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
 
-                    final columns = width >= 800
-                        ? 4
-                        : width >= 560
+                        final columns = width >= 800
+                            ? 4
+                            : width >= 560
                             ? 3
                             : 2;
 
-                    final aspectRatio = width >= 800
-                        ? 1.25
-                        : width >= 560
+                        final aspectRatio = width >= 800
+                            ? 1.25
+                            : width >= 560
                             ? 1.05
                             : 0.9;
 
-                    return GridView.count(
-                      crossAxisCount: columns,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: aspectRatio,
-                      children: [
-                        _buildStatCard(
-                          title: 'Total Tasks',
-                          value: '$total',
-                          icon: Icons.checklist_rounded,
-                          color: _primary,
-                        ),
-                        _buildStatCard(
-                          title: 'Completed',
-                          value: '$completed',
-                          icon: Icons.check_circle_outline,
-                          color: const Color(0xFF10B981),
-                        ),
-                        _buildStatCard(
-                          title: 'Pending',
-                          value: '$pending',
-                          icon: Icons.pending_actions,
-                          color: const Color(0xFFF59E0B),
-                        ),
-                        _buildStatCard(
-                          title: 'Completion Rate',
-                          value: percentage,
-                          icon: Icons.trending_up,
-                          color: const Color(0xFF6366F1),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 28),
-
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFE5E7EB),
+                        return GridView.count(
+                          crossAxisCount: columns,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: aspectRatio,
+                          children: [
+                            _buildStatCard(
+                              title: 'Total Tasks',
+                              value: '$total',
+                              icon: Icons.checklist_rounded,
+                              color: _primary,
+                            ),
+                            _buildStatCard(
+                              title: 'Completed',
+                              value: '$completed',
+                              icon: Icons.check_circle_outline,
+                              color: const Color(0xFF10B981),
+                            ),
+                            _buildStatCard(
+                              title: 'Pending',
+                              value: '$pending',
+                              icon: Icons.pending_actions,
+                              color: const Color(0xFFF59E0B),
+                            ),
+                            _buildStatCard(
+                              title: 'Completion Rate',
+                              value: percentage,
+                              icon: Icons.trending_up,
+                              color: const Color(0xFF6366F1),
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Overall Completion',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
-                        ),
+
+                    const SizedBox(height: 28),
+
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$completed out of $total tasks completed',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: _secondaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: completionRate,
-                          minHeight: 10,
-                          backgroundColor: const Color(0xFFE5E7EB),
-                          valueColor:
-                              const AlwaysStoppedAnimation<Color>(_primary),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          percentage,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _primary,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Overall Completion',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF111827),
+                            ),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$completed out of $total tasks completed',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: _secondaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: completionRate,
+                              minHeight: 10,
+                              backgroundColor: const Color(0xFFE5E7EB),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                _primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              percentage,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    OutlinedButton.icon(
+                      onPressed: _retry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh Statistics'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _primary,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                OutlinedButton.icon(
-                  onPressed: _retry,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh Statistics'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _primary,
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );   
+              ),
+            );
           },
         ),
       ),
