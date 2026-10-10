@@ -1,8 +1,8 @@
 # TaskNest
 
-> A clean, focused task-management app for Android — create, search, filter, complete, and track your daily tasks with a live statistics dashboard.
+> A clean, focused task-management app for Android & the web — create, search, filter, complete, and track your daily tasks with a live statistics dashboard.
 
-TaskNest is a **Flutter** task-management mobile application powered by **Supabase / PostgreSQL**. It lets you organize your day with a small, fast, and readable UI: create tasks with priorities and due dates, search and filter them in real time, mark them complete with a single tap, and review your progress on a dedicated statistics screen.
+TaskNest is a **Flutter** task-management application powered by **Supabase / PostgreSQL**, verified on **Android and Web**. It lets you organize your day with a small, fast, and readable UI: create tasks with priorities and due dates, search and filter them in real time, mark them complete with a single tap, and review your progress on a dedicated statistics screen.
 
 Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as a **standard Flutter application** — separating UI, the data model, and database access into clear layers instead of relying on generated code.
 
@@ -11,7 +11,8 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 ![Backend](https://img.shields.io/badge/Backend-Supabase-3FCF8E?logo=supabase&logoColor=white)
 ![Database](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql&logoColor=white)
 ![SDK](https://img.shields.io/badge/supabase_flutter-2.18.2-3ECF8E)
-![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
+![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
+![Web](https://img.shields.io/badge/Web-4285F4?logo=googlechrome&logoColor=white)
 ![State](https://img.shields.io/badge/State-SetState-0d9488)
 
 <p align="center">
@@ -36,7 +37,7 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 - [Environment Setup](#environment-setup)
 - [Running Locally](#running-locally)
 - [Build & Release](#build--release)
-- [Android & Networking](#android--networking)
+- [Android & Web (Platform & Networking)](#android--web-platform--networking)
 - [Testing & Quality](#testing--quality)
 - [Performance & Security Considerations](#performance--security-considerations)
 - [Known Limitations](#known-limitations)
@@ -109,7 +110,7 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 - SnackBar error messages for create, update, and delete failures.
 - The full fetch → show → mutate → **re-fetch** cycle; no Supabase Realtime subscriptions are used.
 
-> **Client-side filtering** — search, status, and priority filters are applied in memory over the fetched list (`home_page.dart`), not as server-side query filters. Refresh is done by re-fetching tasks after an operation; the native app does **not** subscribe to Supabase Realtime.
+> **Client-side filtering** — search, status, and priority filters are applied in memory over the fetched list (`home_page.dart`), not as server-side query filters. Refresh is done by re-fetching tasks after an operation; the application does **not** subscribe to Supabase Realtime.
 
 ---
 
@@ -135,7 +136,7 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 | **Client SDK** | [`supabase_flutter`](https://pub.dev/packages/supabase_flutter) `^2.18.2` |
 | **Icons** | `cupertino_icons` `^1.0.8` |
 | **Linting** | `flutter_lints` `^6.0.0` (dev dependency, via `analysis_options.yaml`) |
-| **Platform** | Android (`applicationId`: `com.example.tasknest_flutter`) |
+| **Platform** | Android (`applicationId`: `com.example.tasknest_flutter`) and Web — both verified |
 | **State management** | None external — Flutter `StatefulWidget` + `setState` |
 | **Data access** | `TaskService` over the Supabase client (`TaskService.fetchTasks`, `addTask`, `updateTask`, `updateTaskCompletion`, `deleteTask`) |
 
@@ -218,7 +219,7 @@ tasknest_flutter/
 └── pubspec.yaml
 ```
 
-> The `android/`, `ios/`, `linux/`, `macos/`, `web/`, and `windows/` folders come from the standard Flutter project template. Only the **Android** target is documented here because it is the verified platform for this application.
+> The `android/`, `ios/`, `linux/`, `macos/`, `web/`, and `windows/` folders come from the standard Flutter project template. The **Android** and **Web** targets are the verified platforms for this application.
 
 ---
 
@@ -356,8 +357,16 @@ Values are supplied through a local `env.json` file that is **git-ignored** (`.g
 
 ## Running Locally
 
+Run on your default device (emulator, connected Android device, or Chrome):
+
 ```bash
 flutter run --dart-define-from-file=env.json
+```
+
+Or target a specific device, for example Chrome for the web version:
+
+```bash
+flutter run -d chrome --dart-define-from-file=env.json
 ```
 
 The flag is mandatory: without it `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are empty and Supabase cannot initialize. IDE run configurations (Android Studio / VS Code) must include the same `--dart-define-from-file=env.json` argument.
@@ -384,17 +393,29 @@ Install it on a connected Android device (with USB debugging enabled) using:
 adb install build/app/outputs/flutter-apk/app-release.apk
 ```
 
+### Web build
+
+Build the web version with your local environment file:
+
+```bash
+flutter build web --dart-define-from-file=env.json
+```
+
+The compiled web app is written to `build/web/` and can be served by any static web server.
+
 ---
 
-## Android & Networking
+## Android & Web (Platform & Networking)
 
-The main manifest (`android/app/src/main/AndroidManifest.xml`) declares Internet access:
+**Android** — the main manifest (`android/app/src/main/AndroidManifest.xml`) declares Internet access:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 ```
 
-This is required so the app can reach the Supabase REST API. The debug and profile manifests declare the same permission for development (hot reload / debugger communication). The application ID is `com.example.tasknest_flutter`.
+This is required so the app can reach the Supabase REST API on Android. The debug and profile manifests declare the same permission for development (hot reload / debugger communication). The application ID is `com.example.tasknest_flutter`.
+
+**Web** — the app runs in the browser through Flutter web and talks to the same Supabase project using the same compile-time environment variables. All screens, filtering, and statistics were verified in a browser. No extra permission is needed on the web besides browser access to the Supabase endpoint.
 
 ---
 
@@ -440,6 +461,7 @@ Client-side guards would be a UX layer anyway — in any future multi-user setup
 - Sorting relies on Supabase default ascending order for `priority_order` and `created_at`.
 - The included widget test is still the default counter-template scaffold and does not reflect the app.
 - Colors and styling constants are repeated across pages rather than centralized in a theme file.
+- The web build is verified in a browser but ships without PWA/service-worker offline support.
 
 ---
 
