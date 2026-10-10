@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'add_task_page.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
+import 'task_details_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -146,6 +147,20 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _openTaskDetails(Task task) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TaskDetailsPage(task: task),
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _tasksFuture = TaskService().fetchTasks();
+    });
+  }
+
   Widget _buildTaskCard(Task task) {
     final priorityColor = _priorityColor(task.priority);
 
@@ -223,6 +238,14 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'View task details',
+                onPressed: () => _openTaskDetails(task),
+                icon: const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFF4F46E5),
                 ),
               ),
               IconButton(
