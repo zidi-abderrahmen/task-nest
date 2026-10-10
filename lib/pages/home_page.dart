@@ -1,6 +1,5 @@
-
 import 'package:flutter/material.dart';
-
+import 'add_task_page.dart';
 import '../models/task.dart';
 import '../services/task_service.dart';
 
@@ -131,6 +130,20 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
+  }
+
+  Future<void> _openAddTask() async {
+    final added = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const AddTaskPage(),
+      ),
+    );
+
+    if (!mounted || added != true) return;
+
+    setState(() {
+      _tasksFuture = TaskService().fetchTasks();
+    });
   }
 
   Widget _buildTaskCard(Task task) {
@@ -369,6 +382,25 @@ class _HomePageState extends State<HomePage> {
                                     );
                                   },
                                 ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: _openAddTask,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add Task'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4F46E5),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     );

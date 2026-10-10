@@ -34,4 +34,24 @@ class TaskService {
         .delete()
         .eq('id', taskId);
   }
+
+  Future<void> addTask({
+    required String title,
+    required String description,
+    required String priority,
+    DateTime? dueDate,
+  }) async {
+    final data = <String, dynamic>{
+      'title': title.trim(),
+      'description': description.trim(),
+      'completed': false,
+      'priority': priority,
+    };
+
+    if (dueDate != null) {
+      data['due_date'] = dueDate.toIso8601String().split('T').first;
+    }
+
+    await _client.from('tasks').insert(data);
+  }
 }
