@@ -210,7 +210,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
 
               // Priority
               DropdownButtonFormField<String>(
-                value: _priority,
+                initialValue: _priority,
                 decoration: InputDecoration(
                   labelText: 'Priority',
                   filled: true,

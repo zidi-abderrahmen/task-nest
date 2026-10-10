@@ -161,7 +161,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
               const SizedBox(height: 20),
 
               DropdownButtonFormField<String>(
-                value: _priority,
+                initialValue: _priority,
                 decoration: InputDecoration(
                   labelText: 'Priority',
                   filled: true,
