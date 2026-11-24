@@ -10,7 +10,6 @@ import '../widgets/task_card.dart';
 import '../widgets/task_filter_sheet.dart';
 import '../widgets/task_list_header.dart';
 import 'add_task_page.dart';
-import 'statistics_page.dart';
 import 'task_details_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -185,15 +184,6 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('TaskNest'),
-        actions: [
-          IconButton(
-            tooltip: 'Statistics',
-            icon: const Icon(Icons.insights_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StatisticsPage()),
-            ),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddTask,

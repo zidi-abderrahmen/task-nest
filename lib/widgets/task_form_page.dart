@@ -200,7 +200,7 @@ class _TaskFormPageState extends State<TaskFormPage> {
           return;
         }
         final discard = await _confirmDiscard();
-        if (discard && mounted) Navigator.of(context).pop();
+        if (discard && context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
