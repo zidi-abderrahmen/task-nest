@@ -12,6 +12,12 @@ class AppColors {
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
+
+  static Color forPriority(String priority) => switch (priority) {
+      'High' => AppColors.danger,
+      'Medium' => AppColors.warning,
+      _ => AppColors.success,
+    };
 }
 
 class AppSpacing {

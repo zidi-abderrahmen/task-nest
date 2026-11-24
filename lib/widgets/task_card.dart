@@ -17,11 +17,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback onOpenDetails;
   final VoidCallback onDelete;
 
-  Color get _priorityColor => switch (task.priority) {
-        'High' => AppColors.danger,
-        'Medium' => AppColors.warning,
-        _ => AppColors.success,
-      };
+  Color get _priorityColor => AppColors.forPriority(task.priority);
 
   String _formatDate(DateTime date) {
     final d = date.day.toString().padLeft(2, '0');
