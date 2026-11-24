@@ -100,7 +100,38 @@ class TaskNestApp extends StatelessWidget {
       themeMode: ThemeMode.light,
       scrollBehavior: const _AppScrollBehavior(),
       builder: (context, child) => _TextScaleLimiter(child: child),
-      home: const HomePage(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        // Show HomePage regardless of auth state (login is optional)
+        // The HomePage will handle showing login prompt when needed
+        return const HomePage();
+      },
     );
   }
 }

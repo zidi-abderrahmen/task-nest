@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/task.dart';
 import '../services/task_service.dart';
@@ -10,6 +13,7 @@ import '../widgets/task_card.dart';
 import '../widgets/task_filter_sheet.dart';
 import '../widgets/task_list_header.dart';
 import 'add_task_page.dart';
+import 'login_page.dart';
 import 'task_details_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -43,15 +47,43 @@ class _HomePageState extends State<HomePage> {
     return 'Good evening';
   }
 
+  User? _user;
+  late final StreamSubscription<AuthState> _authSubscription;
+
   @override
   void initState() {
     super.initState();
+    _user = Supabase.instance.client.auth.currentUser;
     _loadTasks();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
+      if (!mounted) return;
+
+      final previousUser = _user;
+      final newUser = event.session?.user;
+
+      setState(() {
+        _user = newUser;
+      });
+
+      // Sync local tasks when user signs in
+      if (previousUser == null && newUser != null) {
+        final synced = await _taskService.syncLocalTasks();
+        if (!mounted) return;
+        await _loadTasks(showLoader: false);
+        if (synced > 0) {
+          _showSnack('$synced local task${synced == 1 ? '' : 's'} synced to your account');
+        }
+      } else if (previousUser != null && newUser == null) {
+        // Signed out — reload from local store
+        await _loadTasks(showLoader: false);
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _authSubscription.cancel();
     super.dispose();
   }
 
@@ -153,6 +185,24 @@ class _HomePageState extends State<HomePage> {
     await _refresh();
   }
 
+  Future<void> _openLogin() async {
+    final result = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const LoginPage()));
+    if (!mounted || result != true) return;
+    // Auth state will update automatically via stream
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      _showSnack('Signed out successfully');
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Could not sign out: $e');
+    }
+  }
+
   Future<void> _showFilterSheet() async {
     final result = await showModalBottomSheet<TaskFilterResult>(
       context: context,
@@ -184,6 +234,70 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('TaskNest'),
+        actions: [
+          if (_user != null)
+            PopupMenuButton<String>(
+              icon: CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primaryContainer,
+                child: Text(
+                  _user!.email?.substring(0, 1).toUpperCase() ?? 'U',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              onSelected: (value) {
+                if (value == 'logout') _signOut();
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _user!.email ?? 'Unknown',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'Signed in',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 8),
+                      Text('Sign Out'),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          else
+            IconButton(
+              tooltip: 'Sign In',
+              icon: const Icon(Icons.login),
+              onPressed: _openLogin,
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddTask,
@@ -200,7 +314,9 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$_greeting 👋',
+                    _user != null
+                        ? '$_greeting, ${_user!.email?.split('@').first ?? 'User'} 👋'
+                        : '$_greeting 👋',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -208,8 +324,10 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Stay organized today.',
+                  Text(
+                    _user != null
+                        ? 'Your tasks are synced across devices.'
+                        : 'Tasks are saved locally. Sign in to sync and back them up.',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,

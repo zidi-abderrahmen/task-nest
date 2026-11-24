@@ -20,6 +20,7 @@ class Task {
     this.dueDate,
     this.createdAt,
     this.priorityOrder,
+    this.userId,
   });
 
   final String id;
@@ -30,6 +31,7 @@ class Task {
   final DateTime? dueDate;
   final DateTime? createdAt;
   final int? priorityOrder;
+  final String? userId;
 
   /// Normalizes any date string to a date-only `DateTime` (local midnight).
   ///
@@ -56,6 +58,7 @@ class Task {
       priorityOrder: map['priority_order'] == null
           ? null
           : int.tryParse(map['priority_order'].toString()),
+      userId: map['user_id']?.toString(),
     );
   }
 }

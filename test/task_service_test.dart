@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tasknest_flutter/models/task.dart';
+import 'package:tasknest_flutter/services/local_task_service.dart';
 import 'package:tasknest_flutter/services/task_service.dart';
 import 'package:yet_another_json_isolate/yet_another_json_isolate.dart';
 
@@ -35,6 +38,8 @@ void main() {
   late YAJsonIsolate isolate;
 
   setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
     isolate = YAJsonIsolate();
     await isolate.initialize();
   });
@@ -50,6 +55,17 @@ void main() {
       httpClient: httpClient,
       isolate: isolate,
       postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+    );
+  }
+
+  /// Creates a TaskService with a mock local service that is pre-populated
+  /// so the service routes to Supabase (signed-in path).
+  TaskService makeSignedInService(SupabaseClient client) {
+    return TaskService(
+      client: client,
+      local: _MockLocalTaskService(),
+      forceSignedIn: true,
+      forceUserId: 'test-user-id',
     );
   }
 
@@ -82,7 +98,7 @@ void main() {
           ]),
         );
 
-        final tasks = await TaskService(client: makeClient(httpClient))
+        final tasks = await makeSignedInService(makeClient(httpClient))
             .fetchTasks();
 
         expect(tasks, hasLength(2));
@@ -104,7 +120,7 @@ void main() {
     test('requests ordering by priority_order and created_at', () async {
       final httpClient = RecordingHttpClient((request) => _json([]));
 
-      await TaskService(client: makeClient(httpClient)).fetchTasks();
+      await makeSignedInService(makeClient(httpClient)).fetchTasks();
 
       final orderParam = httpClient.lastRequest!.url.queryParameters['order'];
       expect(orderParam, contains('priority_order'));
@@ -116,7 +132,7 @@ void main() {
         (request) => _json({'message': 'internal error', 'code': '500'}, 500),
       );
 
-      final service = TaskService(client: makeClient(httpClient));
+      final service = makeSignedInService(makeClient(httpClient));
 
       await expectLater(
         service.fetchTasks(),
@@ -133,7 +149,7 @@ void main() {
         ], 201),
       );
 
-      await TaskService(client: makeClient(httpClient)).addTask(
+      await makeSignedInService(makeClient(httpClient)).addTask(
         title: '  Call mom  ',
         description: '  Evening call  ',
         priority: 'High',
@@ -160,7 +176,7 @@ void main() {
         ], 201),
       );
 
-      await TaskService(client: makeClient(httpClient))
+      await makeSignedInService(makeClient(httpClient))
           .addTask(title: 'Quick task', description: '', priority: 'Medium');
 
       final body =
@@ -174,7 +190,7 @@ void main() {
         (request) => _json({'message': 'insert failed', 'code': '400'}, 400),
       );
 
-      final service = TaskService(client: makeClient(httpClient));
+      final service = makeSignedInService(makeClient(httpClient));
 
       await expectLater(
         service.addTask(title: 'Task', description: '', priority: 'Low'),
@@ -191,7 +207,7 @@ void main() {
           (request) => _json({'id': 'task-1'}),
         );
 
-        await TaskService(client: makeClient(httpClient)).updateTask(
+        await makeSignedInService(makeClient(httpClient)).updateTask(
           taskId: 'task-1',
           title: 'Renamed task',
           description: '',
@@ -213,7 +229,7 @@ void main() {
         (request) => _json({'message': 'update failed', 'code': '500'}, 500),
       );
 
-      final service = TaskService(client: makeClient(httpClient));
+      final service = makeSignedInService(makeClient(httpClient));
 
       await expectLater(
         service.updateTask(
@@ -233,7 +249,7 @@ void main() {
         (request) => _json({'id': 'task-1'}),
       );
 
-      final service = TaskService(client: makeClient(httpClient));
+      final service = makeSignedInService(makeClient(httpClient));
       await service.updateTaskCompletion(taskId: 'task-1', completed: true);
 
       final request = httpClient.lastRequest!;
@@ -249,7 +265,7 @@ void main() {
         (request) => _json({'message': 'update failed', 'code': '500'}, 500),
       );
 
-      final service = TaskService(client: makeClient(httpClient));
+      final service = makeSignedInService(makeClient(httpClient));
 
       await expectLater(
         service.updateTaskCompletion(taskId: 'task-1', completed: false),
@@ -264,7 +280,7 @@ void main() {
         (request) => _json({'id': 'task-1'}, 200),
       );
 
-      await TaskService(client: makeClient(httpClient)).deleteTask('task-1');
+      await makeSignedInService(makeClient(httpClient)).deleteTask('task-1');
 
       expect(httpClient.lastRequest?.method, 'DELETE');
       expect(httpClient.lastRequest?.url.path, '/rest/v1/tasks');
@@ -277,9 +293,47 @@ void main() {
       );
 
       await expectLater(
-        TaskService(client: makeClient(httpClient)).deleteTask('task-1'),
+        makeSignedInService(makeClient(httpClient)).deleteTask('task-1'),
         throwsA(isA<PostgrestException>()),
       );
     });
   });
+}
+
+/// A no-op local service used in tests to force the signed-in code path.
+class _MockLocalTaskService extends LocalTaskService {
+  @override
+  Future<List<Task>> fetchTasks() async => [];
+
+  @override
+  Future<void> addTask({
+    required String title,
+    required String description,
+    required String priority,
+    DateTime? dueDate,
+  }) async {}
+
+  @override
+  Future<void> updateTaskCompletion({
+    required String taskId,
+    required bool completed,
+  }) async {}
+
+  @override
+  Future<void> deleteTask(String taskId) async {}
+
+  @override
+  Future<void> updateTask({
+    required String taskId,
+    required String title,
+    required String description,
+    required String priority,
+    DateTime? dueDate,
+  }) async {}
+
+  @override
+  Future<List<Task>> drainTasks() async => [];
+
+  @override
+  Future<bool> hasLocalTasks() async => false;
 }

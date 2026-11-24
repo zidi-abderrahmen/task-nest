@@ -10,7 +10,7 @@ void main() {
   ) async {
     await tester.pumpWidget(buildApp());
 
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.byType(FilledButton));
     await tester.pump();
 
     expect(find.text('Task title is required.'), findsOneWidget);
@@ -20,7 +20,7 @@ void main() {
     await tester.pumpWidget(buildApp());
 
     await tester.enterText(find.byType(TextFormField).first, '   ');
-    await tester.tap(find.byType(ElevatedButton));
+    await tester.tap(find.byType(FilledButton));
     await tester.pump();
 
     expect(find.text('Task title is required.'), findsOneWidget);
