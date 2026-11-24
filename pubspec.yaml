@@ -52,6 +52,14 @@ dev_dependencies:
 
   # Used by test/task_service_test.dart to control the JSON worker lifecycle.
   yet_another_json_isolate: ^2.1.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
