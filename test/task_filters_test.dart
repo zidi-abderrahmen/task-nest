@@ -43,8 +43,8 @@ void main() {
       final result = filterTasks(
         tasks,
         query: 'BUY MILK',
-        status: 'All',
-        priority: 'All',
+        status: TaskStatusFilter.all,
+        priority: TaskPriorityFilter.all,
       );
       expect(result.map((t) => t.title), ['Buy milk']);
     });
@@ -53,8 +53,8 @@ void main() {
       final result = filterTasks(
         [_task(title: 'Read', description: 'review the docs')],
         query: 'docs',
-        status: 'All',
-        priority: 'All',
+        status: TaskStatusFilter.all,
+        priority: TaskPriorityFilter.all,
       );
       expect(result, isEmpty);
     });
@@ -65,32 +65,32 @@ void main() {
     });
 
     test('keeps only pending tasks with status = Pending', () {
-      final result = filterTasks(tasks, query: '', status: 'Pending');
+      final result = filterTasks(tasks, query: '', status: TaskStatusFilter.pending);
       expect(result.map((t) => t.title), ['Buy milk', 'Call dentist']);
     });
 
     test('keeps only completed tasks with status = Completed', () {
-      final result = filterTasks(tasks, query: '', status: 'Completed');
+      final result = filterTasks(tasks, query: '', status: TaskStatusFilter.completed);
       expect(result.map((t) => t.title), ['Write report', 'Plan trip']);
     });
 
     test('keeps everything with status = All', () {
-      final result = filterTasks(tasks, query: '', status: 'All');
+      final result = filterTasks(tasks, query: '', status: TaskStatusFilter.all);
       expect(result.length, tasks.length);
     });
 
     test('filters by High priority only', () {
-      final result = filterTasks(tasks, query: '', priority: 'High');
+      final result = filterTasks(tasks, query: '', priority: TaskPriorityFilter.high);
       expect(result.map((t) => t.title), ['Buy milk', 'Write report']);
     });
 
     test('filters by Low priority only', () {
-      final result = filterTasks(tasks, query: '', priority: 'Low');
+      final result = filterTasks(tasks, query: '', priority: TaskPriorityFilter.low);
       expect(result.map((t) => t.title), ['Call dentist']);
     });
 
     test('keeps everything with priority = All', () {
-      final result = filterTasks(tasks, query: '', priority: 'All');
+      final result = filterTasks(tasks, query: '', priority: TaskPriorityFilter.all);
       expect(result.length, tasks.length);
     });
 
@@ -98,23 +98,23 @@ void main() {
       final result = filterTasks(
         tasks,
         query: 'report',
-        status: 'Completed',
-        priority: 'High',
+        status: TaskStatusFilter.completed,
+        priority: TaskPriorityFilter.high,
       );
       expect(result.map((t) => t.title), ['Write report']);
 
       final empty = filterTasks(
         tasks,
         query: 'milk',
-        status: 'Completed',
-        priority: 'High',
+        status: TaskStatusFilter.completed,
+        priority: TaskPriorityFilter.high,
       );
       expect(empty, isEmpty);
     });
 
     test('returns an empty list for an empty task list', () {
       expect(filterTasks([], query: ''), isEmpty);
-      expect(filterTasks([], query: 'x', status: 'Pending'), isEmpty);
+      expect(filterTasks([], query: 'x', status: TaskStatusFilter.pending), isEmpty);
     });
   });
 }

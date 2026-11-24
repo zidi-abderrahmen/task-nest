@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tasknest_flutter/theme/app_theme.dart';
 import 'pages/home_page.dart';
 
 const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -32,12 +33,7 @@ class TaskNestApp extends StatelessWidget {
     return MaterialApp(
       title: 'TaskNest',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4F46E5),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
       home: const HomePage(),
     );
   }

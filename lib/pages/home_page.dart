@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/task.dart';
 import '../services/task_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/task_filters.dart';
+import '../widgets/state_widgets.dart';
+import '../widgets/task_card.dart';
+import '../widgets/task_filter_sheet.dart';
+import '../widgets/task_list_header.dart';
 import 'add_task_page.dart';
-import 'task_details_page.dart';
 import 'statistics_page.dart';
+import 'task_details_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,20 +22,32 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _searchController = TextEditingController();
+  final _taskService = TaskService();
 
-  late Future<List<Task>> _tasksFuture;
+  List<Task>? _tasks;
+  Object? _error;
+  bool _loading = true;
 
-  String _statusFilter = 'All';
-  String _priorityFilter = 'All';
+  TaskStatusFilter _statusFilter = TaskStatusFilter.all;
+  TaskPriorityFilter _priorityFilter = TaskPriorityFilter.all;
 
-  static const _primary = Color(0xFF4F46E5);
-  static const _background = Color(0xFFF8FAFC);
-  static const _secondaryText = Color(0xFF64748B);
+  bool get _hasFilters =>
+      _statusFilter != TaskStatusFilter.all ||
+      _priorityFilter != TaskPriorityFilter.all;
+
+  bool get _hasSearch => _searchController.text.trim().isNotEmpty;
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
   @override
   void initState() {
     super.initState();
-    _tasksFuture = TaskService().fetchTasks();
+    _loadTasks();
   }
 
   @override
@@ -38,668 +56,378 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'No due date';
+  // ---------- data ----------
 
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-
-    return '$day/$month/${date.year}';
-  }
-
-  Color _priorityColor(String priority) {
-    switch (priority) {
-      case 'High':
-        return const Color(0xFFEF4444);
-      case 'Medium':
-        return const Color(0xFFF59E0B);
-      default:
-        return const Color(0xFF10B981);
+  Future<void> _loadTasks({bool showLoader = true}) async {
+    if (showLoader) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final tasks = await _taskService.fetchTasks();
+      if (!mounted) return;
+      setState(() {
+        _tasks = tasks;
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
     }
   }
 
+  Future<void> _refresh() => _loadTasks(showLoader: false);
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // ---------- actions ----------
+
   Future<void> _toggleTask(Task task) async {
+    HapticFeedback.lightImpact();
     try {
-      await TaskService().updateTaskCompletion(
+      await _taskService.updateTaskCompletion(
         taskId: task.id,
         completed: !task.completed,
       );
-
       if (!mounted) return;
-
-      setState(() {
-        _tasksFuture = TaskService().fetchTasks();
-      });
-    } catch (error) {
+      await _refresh();
+    } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not update task: $error')));
+      _showSnack('Could not update task: $e');
     }
   }
 
   Future<void> _deleteTask(Task task) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete task?'),
-          content: Text('Are you sure you want to delete "${task.title}"?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text('Are you sure you want to delete "${task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
-
     if (confirmed != true || !mounted) return;
 
     try {
-      await TaskService().deleteTask(task.id);
-
+      await _taskService.deleteTask(task.id);
       if (!mounted) return;
-
-      setState(() {
-        _tasksFuture = TaskService().fetchTasks();
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task deleted successfully.')),
-      );
-    } catch (error) {
+      await _refresh();
+      _showSnack('Task deleted successfully.');
+    } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not delete task: $error')));
+      _showSnack('Could not delete task: $e');
     }
   }
 
   Future<void> _openAddTask() async {
     final added = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => const AddTaskPage()));
-
     if (!mounted || added != true) return;
-
-    setState(() {
-      _tasksFuture = TaskService().fetchTasks();
-    });
+    await _refresh();
   }
 
   Future<void> _openTaskDetails(Task task) async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => TaskDetailsPage(task: task)));
-
-    if (!mounted) return;
-
-    setState(() {
-      _tasksFuture = TaskService().fetchTasks();
-    });
-  }
-
-  Widget _buildTaskBadge({
-    required String label,
-    required Color color,
-    IconData? icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TaskDetailsPage(task: task)),
     );
+    if (!mounted) return;
+    await _refresh();
   }
 
   Future<void> _showFilterSheet() async {
-    var selectedStatus = _statusFilter;
-    var selectedPriority = _priorityFilter;
-
-    await showModalBottomSheet<void>(
+    final result = await showModalBottomSheet<TaskFilterResult>(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.white,
-      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+        BorderRadius.vertical(top: Radius.circular(AppRadius.md)),
       ),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Filter Tasks',
-                          style: TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Close',
-                        onPressed: () {
-                          Navigator.of(sheetContext).pop();
-                        },
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: ['All', 'Pending', 'Completed'].map((status) {
-                      final selected = selectedStatus == status;
-
-                      return ChoiceChip(
-                        label: Text(status),
-                        selected: selected,
-                        selectedColor: const Color(0xFF4F46E5),
-                        backgroundColor: Colors.white,
-                        labelStyle: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : const Color(0xFF64748B),
-                        ),
-                        onSelected: (value) {
-                          if (!value) return;
-
-                          setSheetState(() {
-                            selectedStatus = status;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'Priority',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: ['All', 'High', 'Medium', 'Low'].map((priority) {
-                      final selected = selectedPriority == priority;
-
-                      return ChoiceChip(
-                        label: Text(priority),
-                        selected: selected,
-                        selectedColor: const Color(0xFF4F46E5),
-                        backgroundColor: Colors.white,
-                        labelStyle: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : const Color(0xFF64748B),
-                        ),
-                        onSelected: (value) {
-                          if (!value) return;
-
-                          setSheetState(() {
-                            selectedPriority = priority;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          setSheetState(() {
-                            selectedStatus = 'All';
-                            selectedPriority = 'All';
-                          });
-                        },
-                        child: const Text('Reset'),
-                      ),
-                      const Spacer(),
-                      FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _statusFilter = selectedStatus;
-                            _priorityFilter = selectedPriority;
-                          });
-
-                          Navigator.of(sheetContext).pop();
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Apply Filters'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTaskCard(Task task) {
-    final priorityColor = _priorityColor(task.priority);
-
-    final statusColor = task.completed
-        ? const Color(0xFF10B981)
-        : const Color(0xFF64748B);
-
-    final dueDate = task.dueDate;
-
-    final today = DateUtils.dateOnly(DateTime.now());
-
-    final isOverdue =
-        !task.completed &&
-        dueDate != null &&
-        DateUtils.dateOnly(dueDate).isBefore(today);
-
-    final borderColor = task.completed
-        ? const Color(0xFF10B981).withValues(alpha: 0.35)
-        : const Color(0xFFE5E7EB);
-
-    return GestureDetector(
-      onTap: () => _toggleTask(task),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              task.completed ? Icons.check_circle : Icons.circle_outlined,
-              color: statusColor,
-              size: 25,
-            ),
-
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title.isEmpty ? 'Untitled task' : task.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827),
-                      decoration: task.completed
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-
-                  if (task.description.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      task.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _buildTaskBadge(
-                        label: task.completed ? 'Completed' : 'Pending',
-                        color: statusColor,
-                        icon: task.completed ? Icons.check : Icons.schedule,
-                      ),
-
-                      _buildTaskBadge(
-                        label: task.priority,
-                        color: priorityColor,
-                        icon: Icons.flag_outlined,
-                      ),
-
-                      if (dueDate != null)
-                        _buildTaskBadge(
-                          label: isOverdue
-                              ? 'Overdue · ${_formatDate(dueDate)}'
-                              : _formatDate(dueDate),
-                          color: isOverdue
-                              ? const Color(0xFFEF4444)
-                              : const Color(0xFF64748B),
-                          icon: isOverdue
-                              ? Icons.warning_amber_rounded
-                              : Icons.calendar_today_outlined,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 4),
-
-            SizedBox(
-              width: 36,
-              child: IconButton(
-                tooltip: 'View details',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                onPressed: () => _openTaskDetails(task),
-                icon: const Icon(
-                  Icons.info_outline,
-                  color: Color(0xFF4F46E5),
-                  size: 21,
-                ),
-              ),
-            ),
-
-            SizedBox(
-              width: 36,
-              child: IconButton(
-                tooltip: 'Delete task',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                onPressed: () => _deleteTask(task),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Color(0xFFEF4444),
-                  size: 21,
-                ),
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => TaskFilterSheet(
+        initialStatus: _statusFilter,
+        initialPriority: _priorityFilter,
       ),
     );
+    if (result == null || !mounted) return;
+    setState(() {
+      _statusFilter = result.status;
+      _priorityFilter = result.priority;
+    });
   }
+
+  // ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
-        elevation: 0,
+        title: const Text('TaskNest'),
         actions: [
           IconButton(
             tooltip: 'Statistics',
             icon: const Icon(Icons.insights_outlined),
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const StatisticsPage()));
-            },
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StatisticsPage()),
+            ),
           ),
         ],
-        title: const Text(
-          'TaskNest',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddTask,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Task'),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Good morning 👋',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Stay organized today.',
-                style: TextStyle(fontSize: 14, color: _secondaryText),
-              ),
-              const SizedBox(height: 20),
-
-              Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Search tasks...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isEmpty
-                            ? null
-                            : IconButton(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                                icon: const Icon(Icons.clear),
-                              ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                  Text(
+                    '$_greeting 👋',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-
-                  const SizedBox(width: 8),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      color:
-                          (_statusFilter != 'All' || _priorityFilter != 'All')
-                          ? const Color(0xFF4F46E5)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: IconButton(
-                      tooltip: 'Filter tasks',
-                      onPressed: _showFilterSheet,
-                      icon: Icon(
-                        Icons.tune,
-                        color:
-                            (_statusFilter != 'All' || _priorityFilter != 'All')
-                            ? Colors.white
-                            : const Color(0xFF4F46E5),
-                      ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Stay organized today.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  _buildSearchRow(),
+                  if (_hasFilters) ...[
+                    const SizedBox(height: 12),
+                    _buildActiveFilterChips(),
+                  ],
+                  const SizedBox(height: 16),
+                  Expanded(child: _buildBody()),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              Expanded(
-                child: FutureBuilder<List<Task>>(
-                  future: _tasksFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting &&
-                        !snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Failed to load tasks.'),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _tasksFuture = TaskService().fetchTasks();
-                                });
-                              },
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    final tasks = snapshot.data ?? [];
-
-                    final filteredTasks = filterTasks(
-                      tasks,
-                      query: _searchController.text,
-                      status: _statusFilter,
-                      priority: _priorityFilter,
-                    );
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Tasks (${filteredTasks.length})',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: filteredTasks.isEmpty
-                              ? Center(
-                                  child: Text(
-                                    _searchController.text.trim().isEmpty
-                                        ? 'No Task Yet, Add One!'
-                                        : 'No tasks match your search.',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      color: _secondaryText,
-                                    ),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  itemCount: filteredTasks.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildTaskCard(filteredTasks[index]);
-                                  },
-                                ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton.icon(
-                              onPressed: _openAddTask,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Task'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4F46E5),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Search tasks...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                      icon: const Icon(Icons.clear),
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Material(
+          color: _hasFilters ? AppColors.primary : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(
+              color: _hasFilters ? AppColors.primary : AppColors.border,
+            ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: _showFilterSheet,
+            child: Tooltip(
+              message: 'Filter tasks',
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Icon(
+                  Icons.tune,
+                  color: _hasFilters ? Colors.white : AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveFilterChips() {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        if (_statusFilter != TaskStatusFilter.all)
+          InputChip(
+            label: Text(_statusFilter.label),
+            onDeleted: () =>
+                setState(() => _statusFilter = TaskStatusFilter.all),
+          ),
+        if (_priorityFilter != TaskPriorityFilter.all)
+          InputChip(
+            label: Text(_priorityFilter.label),
+            onDeleted: () =>
+                setState(() => _priorityFilter = TaskPriorityFilter.all),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading && _tasks == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          TaskCardSkeleton(),
+          TaskCardSkeleton(),
+          TaskCardSkeleton(),
+          TaskCardSkeleton(),
+        ],
+      );
+    }
+
+    if (_error != null && _tasks == null) {
+      return ErrorState(onRetry: () => _loadTasks());
+    }
+
+    final all = _tasks ?? const <Task>[];
+    final filtered = filterTasks(
+      all,
+      query: _searchController.text,
+      status: _statusFilter,
+      priority: _priorityFilter,
+    );
+
+    final completed = filtered.where((t) => t.completed).length;
+    final pending = filtered.length - completed;
+    final isTrulyEmpty = all.isEmpty;
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 96),
+        children: [
+          if (filtered.isNotEmpty) ...[
+            TaskListHeader(
+              total: filtered.length,
+              completed: completed,
+              pending: pending,
+            ),
+            const SizedBox(height: 16),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Your Tasks (${filtered.length})',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (_hasFilters)
+                TextButton(
+                  onPressed: () => setState(() {
+                    _statusFilter = TaskStatusFilter.all;
+                    _priorityFilter = TaskPriorityFilter.all;
+                  }),
+                  child: const Text('Clear filters'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (filtered.isEmpty)
+            _buildEmptyState(isTrulyEmpty: isTrulyEmpty)
+          else
+            ...filtered.map(
+              (task) => TaskCard(
+                key: ValueKey(task.id),
+                task: task,
+                onToggle: () => _toggleTask(task),
+                onOpenDetails: () => _openTaskDetails(task),
+                onDelete: () => _deleteTask(task),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState({required bool isTrulyEmpty}) {
+    if (isTrulyEmpty) {
+      return EmptyState(
+        icon: Icons.task_alt,
+        title: 'No tasks yet',
+        message: 'Add your first task to get started.',
+        action: FilledButton.icon(
+          onPressed: _openAddTask,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Task'),
+        ),
+      );
+    }
+
+    return EmptyState(
+      icon: Icons.search_off,
+      title: 'No matching tasks',
+      message: _hasSearch
+          ? 'Try a different search term or adjust your filters.'
+          : 'Adjust your filters to see more tasks.',
+      action: TextButton.icon(
+        onPressed: () {
+          _searchController.clear();
+          setState(() {
+            _statusFilter = TaskStatusFilter.all;
+            _priorityFilter = TaskPriorityFilter.all;
+          });
+        },
+        icon: const Icon(Icons.refresh),
+        label: const Text('Reset'),
       ),
     );
   }
