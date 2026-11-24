@@ -1,8 +1,8 @@
 # TaskNest
 
-> A clean, focused task-management app for Android & the web — create, search, filter, complete, and track your daily tasks with a live statistics dashboard.
+> A clean, focused task-management app for Android & the web — create, search, filter, complete, and track your daily tasks with a live statistics dashboard. Works offline with local storage and syncs to the cloud when you sign in.
 
-TaskNest is a **Flutter** task-management application powered by **Supabase / PostgreSQL**, verified on **Android and Web**. It lets you organize your day with a small, fast, and readable UI: create tasks with priorities and due dates, search and filter them in real time, mark them complete with a single tap, and review your progress on a dedicated statistics screen.
+TaskNest is a **Flutter** task-management application powered by **Supabase / PostgreSQL**, verified on **Android and Web**. It lets you organize your day with a small, fast, and readable UI: create tasks with priorities and due dates, search and filter them in real time, mark them complete with a single tap, and review your progress on a dedicated statistics screen. Tasks are saved locally when offline and automatically synced to Supabase when the user signs in.
 
 Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as a **standard Flutter application** — separating UI, the data model, and database access into clear layers instead of relying on generated code.
 
@@ -14,6 +14,8 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 ![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)
 ![Web](https://img.shields.io/badge/Web-4285F4?logo=googlechrome&logoColor=white)
 ![State](https://img.shields.io/badge/State-SetState-0d9488)
+![Auth](https://img.shields.io/badge/Auth-Supabase%20Auth-3ECF8E)
+![Storage](https://img.shields.io/badge/Local%20Storage-SharedPreferences-FFA000)
 [![Flutter CI](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml/badge.svg)](https://github.com/zidi-abderrahmen/task-nest/actions/workflows/flutter.yml)
 
 <p align="center">
@@ -29,10 +31,10 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 
 | | |
 |:---:|:---:|
-| *Home Page* | *Filter Menu* |
-| ![Home Page](./docs/screenshots/home_page.jpg) | ![Filter Menu](./docs/screenshots/filter_menu.jpg) |
-| *Add / Edit Task* | *Statistics* |
-| ![Add / Edit Task](./docs/screenshots/add_edit_page.jpg) | ![Statistics](./docs/screenshots/statistics_page.jpg) |
+| *Home Page* | *Login Page* |
+| ![Home Page](./docs/screenshots/home_screen.jpg) | ![Login Page](./docs/screenshots/login_screen.jpg) |
+| *Add / Edit Task* | *Task Details* |
+| ![Add / Edit Task](./docs/screenshots/add_edit_screen.jpg) | ![Task Details](./docs/screenshots/details_screen.jpg) |
 
 </div>
 
@@ -47,6 +49,7 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 - [Project Structure](#project-structure)
 - [Routing & Navigation](#routing--navigation)
 - [Database & Data Layer](#database--data-layer)
+- [Authentication & Sync](#authentication--sync)
 - [Priority & Sorting](#priority--sorting)
 - [CRUD Summary](#crud-summary)
 - [Installation](#installation)
@@ -67,19 +70,21 @@ Built originally as a FlutterFlow school demo, TaskNest was recreated by hand as
 
 ## Overview
 
-TaskNest is the client-only half of a Supabase-backed task manager. There is no custom backend to deploy: the app talks directly to a Supabase project whose `public.tasks` table is the single source of truth.
+TaskNest is the client-only half of a Supabase-backed task manager. There is no custom backend to deploy: the app talks directly to a Supabase project whose `public.tasks` table is the single source of truth. When the user is not signed in, tasks are stored locally on the device via `SharedPreferences` and automatically uploaded to Supabase on sign-in.
 
 **What it delivers**
 
-- A **single home screen that does the real work** — tasks are fetched from Supabase and displayed as cards with status, priority, and due-date badges.
+- A **single home screen that does the real work** — tasks are fetched from Supabase (or local storage when offline) and displayed as cards with status, priority, and due-date badges.
 - **Real-time-feeling filtering without extra complexity** — search, status, and priority filters are combined client-side on the already-fetched list, so results update instantly as you type.
 - A **complete task lifecycle** — create, view, edit, toggle completion, and delete (with confirmation) tasks end to end.
+- **Offline-first local storage** — tasks created while not signed in are persisted locally and synced to the cloud on sign-in.
+- **Optional authentication** — email/password and OAuth (Google, GitHub) via Supabase Auth; the home page is always the entry point.
 - **At-a-glance progress** — a statistics page computes total, completed, pending, completion rate, and an overall progress bar from the same task data.
-- **A manually re-architected base** — instead of keeping everything in one generated file, the project separates the `Task` model, a `TaskService` data-access layer, and five focused UI pages.
+- **A manually re-architected base** — instead of keeping everything in one generated file, the project separates the `Task` model, `TaskService` + `LocalTaskService` data-access layers, a theme file, reusable widgets, and five focused UI pages.
 
 **Business value**
 
-Small and deliberate. The entire feature set lives in five readable pages and one data service, which makes the codebase easy to extend — authentication, per-user tasks, and tests are all natural next steps (see the [Roadmap](#roadmap)).
+Small and deliberate. The entire feature set lives in five readable pages, two data services, and a shared widget library, which makes the codebase easy to extend — per-user RLS, real-time sync, and more tests are all natural next steps (see the [Roadmap](#roadmap)).
 
 ---
 
@@ -89,7 +94,7 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 
 | Area | Description |
 | --- | --- |
-| **Home list** | Fetches tasks from Supabase on startup and refreshes after any mutation. |
+| **Home list** | Fetches tasks from Supabase (signed in) or local storage (not signed in) on startup and refreshes after any mutation. |
 | **Task counter** | `Your Tasks (n)` reflects the number of tasks in the **currently filtered** list. |
 | **Search** | Case-insensitive search by task title; a clear button appears when text is entered. |
 | **Status filter** | `All`, `Pending`, and `Completed`, chosen in a bottom-sheet filter panel. |
@@ -104,11 +109,21 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 
 | Area | Description |
 | --- | --- |
-| **Add Task** | Form with required title, optional description, priority dropdown, and optional due date. |
+| **Add Task** | Form with required title, optional description, priority selector, and optional due date. |
 | **Validation** | Empty titles are rejected; the form blocks saving until valid. |
 | **Edit Task** | Pre-populated form that updates the existing row by its database ID — no duplicates are created. |
 | **Completion preserved** | Editing details never changes the completion state. |
 | **Saving state** | Disabled fields, a spinner, and a `Saving...` label while the request is in flight. |
+
+### Authentication
+
+| Area | Description |
+| --- | --- |
+| **Optional login** | The home page is always the first screen; signing in is optional. |
+| **Email / password** | Full sign-in and sign-up form with validation and error messages. |
+| **OAuth** | Google and GitHub sign-in via Supabase OAuth with deep-link redirect. |
+| **Profile menu** | When signed in, the app bar shows an avatar with the user's email and a sign-out option. |
+| **Auto-sync on sign-in** | Locally-created tasks are uploaded to Supabase and linked to the user's account. |
 
 ### Statistics
 
@@ -125,6 +140,7 @@ Small and deliberate. The entire feature set lives in five readable pages and on
 - Loading spinners for every async screen and a **Retry** action on load failure.
 - SnackBar error messages for create, update, and delete failures.
 - The full fetch → show → mutate → **re-fetch** cycle; no Supabase Realtime subscriptions are used.
+- **Offline-first**: tasks persist locally when not signed in and sync on sign-in.
 
 > **Client-side filtering** — search, status, and priority filters are applied in memory over the fetched list (`home_page.dart`), not as server-side query filters. Refresh is done by re-fetching tasks after an operation; the application does **not** subscribe to Supabase Realtime.
 
@@ -157,18 +173,17 @@ Before running, open `env.json` and set your own Supabase project values (see [E
 | --- | --- |
 | **Framework** | [Flutter](https://flutter.dev/) `≥ 3.44` (Material 3, `ColorScheme.fromSeed`) |
 | **Language** | [Dart](https://dart.dev/) `≥ 3.13.5` (project SDK constraint `^3.13.5`) |
-| **Backend** | [Supabase](https://supabase.com/) — hosted Postgres, REST API, and auth-ready infrastructure |
-| **Database** | PostgreSQL (managed by Supabase) — `public.tasks` table |
+| **Backend** | [Supabase](https://supabase.com/) — hosted Postgres, REST API, and auth infrastructure |
+| **Database** | PostgreSQL (managed by Supabase) — `public.tasks` table with `user_id` |
 | **Client SDK** | [`supabase_flutter`](https://pub.dev/packages/supabase_flutter) `^2.18.2` |
+| **Local storage** | [`shared_preferences`](https://pub.dev/packages/shared_preferences) `^2.3.2` |
 | **Icons** | `cupertino_icons` `^1.0.8` |
 | **Linting** | `flutter_lints` `^6.0.0` (dev dependency, via `analysis_options.yaml`) |
 | **Testing** | `flutter_test` + `http` (dev dependency, fake HTTP client for service tests) |
 | **CI** | GitHub Actions — `flutter analyze` + `flutter test` via [`subosito/flutter-action`](https://github.com/subosito/flutter-action) |
 | **Platform** | Android (`applicationId`: `com.example.tasknest_flutter`) and Web — both verified |
 | **State management** | None external — Flutter `StatefulWidget` + `setState` |
-| **Data access** | `TaskService` over the Supabase client (`TaskService.fetchTasks`, `addTask`, `updateTask`, `updateTaskCompletion`, `deleteTask`) |
-
-Values were verified from `pubspec.yaml`, `pubspec.lock`, and the Flutter Android manifest. No provider/Riverpod/BLoC package, no Google Fonts, and no additional assets or fonts are declared.
+| **Data access** | `TaskService` (routes to `LocalTaskService` or Supabase based on auth state) |
 
 ---
 
@@ -176,50 +191,56 @@ Values were verified from `pubspec.yaml`, `pubspec.lock`, and the Flutter Androi
 
 The project follows a simple and deliberate separation of concerns — no state-management library, no over-engineered layers:
 
-- **`Task` model** — an immutable Dart class with a `fromMap` factory that converts a Supabase row into a `Task`.
-- **`TaskService`** — the single owner of database access; every query/insert/update/delete goes through it.
+- **`Task` model** — an immutable Dart class with a `fromMap` factory that converts a Supabase row (or local JSON) into a `Task`.
+- **`TaskService`** — the single owner of data access; routes every query/insert/update/delete to either `LocalTaskService` (not signed in) or Supabase (signed in). Also handles syncing local tasks on sign-in.
+- **`LocalTaskService`** — persists tasks as JSON in `SharedPreferences` when the user is not authenticated.
 - **Pages** — each screen owns its own widget structure and local state (`setState`), calling `TaskService` when data changes.
-- **`main.dart`** — initializes Supabase and defines the Material 3 theme (seed color `0xFF4F46E5`).
+- **Widgets** — reusable components (`TaskCard`, `TaskFilterSheet`, `TaskFormPage`, `StateWidgets`, `TaskListHeader`) in `lib/widgets/`.
+- **Theme** — centralized `AppColors`, `AppSpacing`, `AppRadius`, and `AppTheme` in `lib/theme/app_theme.dart`.
+- **`main.dart`** — initializes Supabase and defines the Material 3 app shell with an `AuthWrapper`.
 
 **Key design decisions**
 
 - **No Shimmer/Redux/BLoC ceremony.** Screen state is plain `StatefulWidget` state; the app is small enough that `setState` keeps it readable.
-- **Reusable pieces as private methods.** The task badge and task card are implemented inside the pages that use them — there is no `lib/widgets/` directory.
+- **Offline-first.** `TaskService` checks `isSignedIn` and routes to local or remote transparently.
 - **Refresh-by-re-fetch.** Pages return a result (`true` from Add, an updated `Task` from Edit) and Home re-fetches when the route pops, keeping the list consistent without Realtime.
+- **Centralized theme.** All colors, spacing, and radii live in `lib/theme/app_theme.dart`.
 
 ### Application flow
 
-When the app boots, `main()` reads the Supabase configuration from compile-time environment variables, initializes the client, and shows `HomePage`. Home fetches all tasks once, then applies search/status/priority filtering locally; mutations trigger a fresh fetch.
+When the app boots, `main()` reads the Supabase configuration from compile-time environment variables, initializes the client, and shows `HomePage` via `AuthWrapper`. Home fetches tasks (from local storage or Supabase depending on auth state), then applies search/status/priority filtering locally; mutations trigger a fresh fetch. On sign-in, local tasks are uploaded and the list is refreshed.
 
 ### Data flow
 
 ```text
-┌────────────────────────────────────────────┐
-│              Flutter UI (pages)            │
-│   Home · Add · Edit · Details · Statistics │
-└────────────────────┬───────────────────────┘
+┌────────────────────────────────────────────────────┐
+│                  Flutter UI (pages)                │
+│   Home · Add · Edit · Details · Statistics · Login │
+└────────────────────┬───────────────────────────────┘
                      │ model + service calls
                      ▼
-┌────────────────────────────────────────────┐
-│         Task model  +  TaskService         │
-└────────────────────┬───────────────────────┘
-                     │ supabase_flutter
-                     ▼
-┌────────────────────────────────────────────┐
-│           Supabase Flutter client          │
-└────────────────────┬───────────────────────┘
-                     │ REST (JSON)
-                     ▼
-┌────────────────────────────────────────────┐
-│              Supabase REST API             │
-└────────────────────┬───────────────────────┘
-                     ▼
+┌────────────────────────────────────────────────────┐
+│  Task model  +  TaskService  +  LocalTaskService   │
+└──────────┬─────────────────────────┬───────────────┘
+           │ signed in               │ not signed in
+           ▼                         ▼
+┌──────────────────────┐  ┌────────────────────────┐
+│  Supabase Flutter    │  │  SharedPreferences     │
+│  client              │  │  (local JSON)          │
+└──────────┬───────────┘  └────────────────────────┘
+           │ REST (JSON)
+           ▼
+┌──────────────────────┐
+│  Supabase REST API   │
+└──────────┬───────────┘
+           ▼
 ┌────────────────────────────────────────────┐
 │        PostgreSQL · public.tasks table     │
+│        (user_id scoped by RLS)            │
 └────────────────────────────────────────────┘
 ```
 
-**UI vs. service responsibilities** — the UI owns form state, validation, filtering, dialogs, SnackBars, and navigation; `TaskService` owns the exact Supabase queries and how rows map to objects. Pages never talk to the database directly.
+**UI vs. service responsibilities** — the UI owns form state, validation, filtering, dialogs, SnackBars, and navigation; `TaskService` owns the exact queries and routing between local and remote. Pages never talk to the database directly.
 
 ---
 
@@ -227,22 +248,31 @@ When the app boots, `main()` reads the Supabase configuration from compile-time 
 
 ```
 tasknest_flutter/
-├── android/                          # Android platform project (manifest, Gradle, launcher icons)
+├── android/                          # Android platform project (manifest, Gradle, launcher icons, deep links)
 ├── lib/
-│   ├── main.dart                     # Entry point: Supabase init + Material 3 app shell
+│   ├── main.dart                     # Entry point: Supabase init + AuthWrapper + Material 3 app shell
 │   ├── models/
-│   │   ├── task.dart                 # Task model + Task.fromMap (Supabase row → Task)
+│   │   ├── task.dart                 # Task model + Task.fromMap (row → Task, incl. user_id)
 │   │   └── task_statistics.dart      # TaskStatistics.fromTasks (progress metrics)
 │   ├── services/
-│   │   └── task_service.dart         # All Supabase CRUD operations
+│   │   ├── task_service.dart         # Auth-aware router: local or Supabase + sync on sign-in
+│   │   └── local_task_service.dart   # SharedPreferences-backed local task storage
+│   ├── theme/
+│   │   └── app_theme.dart            # AppColors, AppSpacing, AppRadius, AppTheme
 │   ├── utils/
 │   │   └── task_filters.dart         # Shared search/status/priority filtering logic
+│   ├── widgets/
+│   │   ├── task_card.dart            # Reusable task card widget
+│   │   ├── task_filter_sheet.dart    # Bottom-sheet filter panel
+│   │   ├── task_form_page.dart       # Shared add/edit form
+│   │   ├── task_list_header.dart     # Task count header
+│   │   └── state_widgets.dart        # Loading / empty / error state widgets
 │   └── pages/
-│       ├── home_page.dart            # Task list, search, filters, delete, navigation
+│       ├── home_page.dart            # Task list, search, filters, auth menu, navigation
+│       ├── login_page.dart           # Email/password + OAuth (Google, GitHub) login
 │       ├── add_task_page.dart        # Create-task form
 │       ├── edit_task_page.dart       # Edit-task form (pre-populated)
-│       ├── task_details_page.dart    # Read-only task view + Edit entry point
-│       └── statistics_page.dart      # Progress metrics + completion bar
+│       └── task_details_page.dart    # Read-only task view + Edit entry point
 ├── test/
 │   ├── task_model_test.dart          # Task.fromMap parsing + due-date handling
 │   ├── task_filters_test.dart        # Priority order + combined filtering
@@ -250,7 +280,7 @@ tasknest_flutter/
 │   ├── task_service_test.dart        # CRUD against a fake HTTP client + errors
 │   └── add_task_page_test.dart       # Add Task form validation (empty/blank title)
 ├── db/
-│   └── schema.sql                    # Tasks table + index + RLS policies
+│   └── schema.sql                    # Tasks table + user_id + indexes + RLS policies
 ├── .github/
 │   └── workflows/
 │       └── flutter.yml               # GitHub Actions CI: analyze + test
@@ -273,15 +303,16 @@ Navigation uses Flutter's built-in `Navigator` with `MaterialPageRoute` — ther
 | Add a task | `HomePage → AddTaskPage` | Returns `true` on success; Home re-fetches. |
 | View a task | `HomePage → TaskDetailsPage` | Opened via the info button on a task card. |
 | Edit a task | `TaskDetailsPage → EditTaskPage` | Returns the updated `Task`; Details re-renders and Home re-fetches on return. |
-| View statistics | `HomePage → StatisticsPage` | Opened via the app-bar insights button. |
+| Sign in / up | `HomePage → LoginPage` | Email/password or OAuth; returns `true` on success. |
+| OAuth callback | Deep link → `LoginPage` | Auth state listener pops back to Home automatically. |
 
-There is intentionally **no edit button on Home's task cards** — editing is reached from the Task Details page to keep the cards clean.
+There is intentionally **no edit button on Home's task cards** — editing is reached from the Task Details page to keep the cards clean. The home page is always the first screen; login is optional.
 
 ---
 
 ## Database & Data Layer
 
-The full schema is committed at **[`db/schema.sql`](./db/schema.sql)** — table, index, and Row Level Security policies. To bootstrap a **fresh** project, paste that file into the Supabase SQL editor or run `supabase db execute --file db/schema.sql`.
+The full schema is committed at **[`db/schema.sql`](./db/schema.sql)** — table, indexes, and Row Level Security policies. To bootstrap a **fresh** project, paste that file into the Supabase SQL editor or run `supabase db execute --file db/schema.sql`.
 
 The application uses the existing Supabase project and its `public.tasks` table. This schema already exists in that remote project — it should **not** be recreated blindly from `db/schema.sql`; only apply the file when setting up a new project:
 
@@ -295,6 +326,7 @@ create table public.tasks (
   priority text null,
   due_date date null,
   priority_order integer null,
+  user_id uuid references auth.users(id) on delete cascade,
   constraint tasks_pkey primary key (id)
 );
 ```
@@ -309,10 +341,38 @@ create table public.tasks (
 | `priority` | Task priority (`High` / `Medium` / `Low`) | `priority` |
 | `due_date` | Optional due date (date only) | `dueDate` |
 | `priority_order` | Numeric value used for priority sorting | `priorityOrder` |
+| `user_id` | Owner's Supabase user ID; `NULL` for local-only tasks | `userId` |
 
 The app writes `id` and `created_at` never — they are database defaults. It also never sends a `completed` value on edit, so changing details never resets completion.
 
-The schema file also enables Row Level Security and grants anonymous `select`/`insert`/`update`/`delete` on `tasks`, matching the demo configuration the app relies on.
+### Row Level Security
+
+The schema enables RLS with two access modes:
+
+- **Anonymous** (`to anon`) — full CRUD on rows where `user_id IS NULL` (local-only tasks).
+- **Authenticated** (`to authenticated`) — full CRUD scoped to `user_id = auth.uid()` (each user sees only their own tasks).
+
+---
+
+## Authentication & Sync
+
+TaskNest uses **Supabase Auth** with optional sign-in. The home page is always the entry point.
+
+### Sign-in methods
+
+- **Email / password** — sign in or create an account with validation and user-friendly error messages.
+- **OAuth** — Google and GitHub via `signInWithOAuth` with a deep-link redirect (`io.supabase.flutter://login-callback/`).
+
+### Local-first sync
+
+1. **Not signed in** — tasks are stored in `SharedPreferences` via `LocalTaskService`.
+2. **Sign in / up** — `TaskService.syncLocalTasks()` uploads all local tasks to Supabase with the user's `user_id`, then clears the local cache.
+3. **Signed in** — all operations go directly to Supabase, scoped by `user_id` via RLS.
+4. **Sign out** — the list reloads from the local store.
+
+### Android deep link
+
+The `AndroidManifest.xml` includes an intent filter for `io.supabase.flutter://login-callback` so the OAuth browser redirect returns to the app.
 
 ---
 
@@ -332,6 +392,7 @@ Priorities map to a numeric `priority_order` when a task is created or edited:
 _client
     .from('tasks')
     .select()
+    .eq('user_id', userId)
     .order('priority_order')
     .order('created_at');
 ```
@@ -344,10 +405,11 @@ Both `order` calls use Supabase's default ascending direction (no `ascending: fa
 
 | Operation | Implementation |
 | --- | --- |
-| **Create** | `TaskService.addTask` — inserts a new row (title, description, priority, `priority_order`, optional due date, `completed: false`). |
-| **Read** | `TaskService.fetchTasks` — selects all rows from `tasks` and maps each to a `Task`. |
+| **Create** | `TaskService.addTask` — inserts a new row (title, description, priority, `priority_order`, optional due date, `completed: false`, `user_id`). Routes to local store when not signed in. |
+| **Read** | `TaskService.fetchTasks` — selects rows from `tasks` filtered by `user_id` (signed in) or reads from `SharedPreferences` (not signed in). |
 | **Update** | `TaskService.updateTask` — edits title, description, priority, `priority_order`, and due date by `id`, preserving completion; `TaskService.updateTaskCompletion` toggles the `completed` flag. |
 | **Delete** | `TaskService.deleteTask` — removes a row by `id` after user confirmation in the UI. |
+| **Sync** | `TaskService.syncLocalTasks` — uploads all local tasks to Supabase with `user_id` and clears the local cache. Called on sign-in. |
 
 ---
 
@@ -401,6 +463,15 @@ cp env.example.json env.json
 - `--dart-define-from-file` does **not** make values secret once embedded in a compiled APK — anyone who extracts the APK can inspect them.
 - The Supabase **publishable** key is intended for client apps. The **`service_role`** key must never be embedded in a Flutter application.
 - If the app is started without configuration, `main()` throws a `StateError` telling you to run with `--dart-define-from-file=env.json`.
+
+### Supabase Auth setup
+
+To enable OAuth (Google / GitHub):
+
+1. **Authentication → Providers** — enable Google and/or GitHub, paste the OAuth app credentials.
+2. **Authentication → URL Configuration** — set **Site URL** to `io.supabase.flutter://login-callback/` and add it to **Redirect URLs**.
+3. **Google Cloud Console** — add `https://<your-project>.supabase.co/auth/v1/callback` as an authorized redirect URI.
+4. **GitHub OAuth app** — set the callback URL to `https://<your-project>.supabase.co/auth/v1/callback`.
 
 ---
 
@@ -456,13 +527,20 @@ The compiled web app is written to `build/web/` and can be served by any static 
 
 ## Android & Web (Platform & Networking)
 
-**Android** — the main manifest (`android/app/src/main/AndroidManifest.xml`) declares Internet access:
+**Android** — the main manifest (`android/app/src/main/AndroidManifest.xml`) declares Internet access and a deep-link intent filter for OAuth callbacks:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
+
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="io.supabase.flutter" android:host="login-callback" />
+</intent-filter>
 ```
 
-This is required so the app can reach the Supabase REST API on Android. The debug and profile manifests declare the same permission for development (hot reload / debugger communication). The application ID is `com.example.tasknest_flutter`.
+The application ID is `com.example.tasknest_flutter`.
 
 **Web** — the app runs in the browser through Flutter web and talks to the same Supabase project using the same compile-time environment variables. All screens, filtering, and statistics were verified in a browser. No extra permission is needed on the web besides browser access to the Supabase endpoint.
 
@@ -474,10 +552,10 @@ TaskNest ships a **real test suite** (replacing the default Flutter template tes
 
 | Test file | Covers |
 | --- | --- |
-| `test/task_model_test.dart` | `Task.fromMap` row parsing, defaults, due-date parsing, and `priority_order` handling. |
+| `test/task_model_test.dart` | `Task.fromMap` row parsing, defaults, due-date parsing, `priority_order` and `user_id` handling. |
 | `test/task_filters_test.dart` | `Task.priorityOrderFor` mapping and `filterTasks` — search, status, priority, combined, and empty-list behavior. |
 | `test/task_statistics_test.dart` | `TaskStatistics.fromTasks` — totals, completion rate, rounded percentage, including the empty-list case. |
-| `test/task_service_test.dart` | `TaskService` CRUD against a **fake HTTP client** — request payloads, ordering, and `PostgrestException` propagation on server errors. |
+| `test/task_service_test.dart` | `TaskService` CRUD against a **fake HTTP client** — request payloads, ordering, `user_id` filtering, and `PostgrestException` propagation on server errors. |
 | `test/add_task_page_test.dart` | Add Task form rejects empty and blank titles. |
 
 Run the quality gates locally:
@@ -495,29 +573,28 @@ CI (`.github/workflows/flutter.yml`) installs the latest **stable** Flutter chan
 
 ### Performance
 
-- The feature set is small and dependency-light (one first-party data package).
+- The feature set is small and dependency-light (two first-party data packages).
 - Filtering is in-memory, so search and filter changes are instant on already-loaded data.
 - Lists use `ListView.builder`-style lazy building for task cards.
+- Local storage via `SharedPreferences` is fast for the small JSON payloads involved.
 
 ### Security
 
-- **No authentication and no user accounts.** The app performs unauthenticated CRUD against the `tasks` table.
-- **Demo RLS setup (described by the developer, not verifiable from the source).** The original TaskNest school-demo Supabase configuration allows anonymous `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on `tasks`. These policies live in the remote Supabase dashboard; the Flutter source can only confirm that the app sends no auth token. Use access to the dashboard (SQL editor → RLS policies) to verify them.
-- Unrestricted anonymous access is fine on a **demo with non-sensitive data** only. It is not an appropriate configuration for protecting private or sensitive task data.
+- **Optional authentication with per-user isolation.** When signed in, RLS policies scope all CRUD to `user_id = auth.uid()`, so each user only sees their own tasks.
+- **Anonymous local-only mode.** When not signed in, tasks are stored on-device and never sent to the server. The anonymous RLS policies only allow access to rows with `user_id IS NULL`.
 - The publishable key is client-safe; the `service_role` key must never be shipped in the app.
-
-Client-side guards would be a UX layer anyway — in any future multi-user setup, Supabase RLS policies remain the source of truth.
+- OAuth redirect URLs must be configured in the Supabase dashboard to prevent open-redirect abuse.
 
 ---
 
 ## Known Limitations
 
-- No authentication, user ownership, or per-user data isolation.
 - No Supabase Realtime: changes made by another client are not pushed; the list refreshes only on navigation/mutation.
 - Filters and search run client-side over the full fetched list (fine at demo scale).
 - Sorting relies on Supabase default ascending order for `priority_order` and `created_at`.
-- Colors and styling constants are repeated across pages rather than centralized in a theme file.
 - The web build is verified in a browser but ships without PWA/service-worker offline support.
+- Local tasks are not encrypted at rest (SharedPreferences is plaintext).
+- OAuth deep-link configuration is Android-specific; iOS requires additional URL scheme setup.
 
 ---
 
@@ -535,6 +612,10 @@ Since FlutterFlow's full code export required a premium subscription, the genera
 - A Statistics page with calculated metrics and a progress bar was added.
 - Form validation, delete confirmation, loading states, and error handling were introduced.
 - The default template test was replaced with a real suite covering the model, filters, statistics, the service, and form validation, and a GitHub Actions CI pipeline was added.
+- **Optional authentication** with email/password and OAuth (Google, GitHub) was added via Supabase Auth.
+- **Offline-first local storage** was implemented with `SharedPreferences` and `LocalTaskService`, with automatic sync to Supabase on sign-in.
+- **Per-user RLS policies** were added to the database schema.
+- A **centralized theme** and **reusable widget library** were extracted from the page files.
 
 The result is a **manually adapted implementation** — not a full FlutterFlow export — with a clearer separation between UI, the data model, and database access.
 
@@ -550,15 +631,17 @@ Implemented today:
 - [x] Statistics with completion rate and progress bar.
 - [x] Delete confirmation, validation, loading, and error states.
 - [x] Automated unit, widget, and service tests plus a GitHub Actions CI pipeline.
+- [x] Optional authentication (email/password + OAuth via Supabase Auth).
+- [x] Per-user task ownership with `user_id` and RLS policies.
+- [x] Offline-first local storage with auto-sync on sign-in.
 
 Planned next steps:
 
-- [ ] Authentication and per-user task ownership.
-- [ ] User-specific Row Level Security policies.
 - [ ] Coverage reporting and more edge-case widget tests.
 - [ ] Accessibility and localization improvements.
-- [ ] Offline task access via a local persistence strategy.
 - [ ] Optional Supabase Realtime updates for live multi-client sync.
+- [ ] iOS OAuth deep-link configuration.
+- [ ] Local task encryption at rest.
 
 ---
 
